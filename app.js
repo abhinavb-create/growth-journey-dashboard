@@ -1,1017 +1,1115 @@
-/* ═══════════════════════════════════════════════
-   Growth Journey Calculator  app.js  v3
-   Visual overhaul:
-   • Sidebar + main-panel manager layout
-   • Inline skill rows (rating + comment same row)
-   • Improved journey map (next-step + goal tags)
-   • Time-period chart filter
-   • Real-time snapshots (no forced "cycle" language)
-═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   Growth Journey Calculator  —  app.js  v4
+   ═══════════════════════════════════════════════════════════ */
 
-// ── Constants ─────────────────────────────────────
-const LEVELS = ['JA','A','SA','AM','M','SM'];
-const LEVEL_NAMES = {JA:'Junior Associate',A:'Associate',SA:'Senior Associate',AM:'Associate Manager',M:'Manager',SM:'Senior Manager'};
-const LEVEL_COLORS = {JA:'#7C3AED',A:'#2563EB',SA:'#059669',AM:'#D97706',M:'#DC2626',SM:'#9D174D'};
-const THRESHOLDS = {JA:70,A:72,SA:75,AM:78,M:82,SM:null};
-const LEADERSHIP_WEIGHT = {JA:0,A:0,SA:.10,AM:.25,M:.40,SM:.50};
+/* ── FRAMEWORK DATA ──────────────────────────────────────── */
+const LEVELS      = ['JA','A','SA','AM','M','SM'];
+const LEVEL_NAMES = { JA:'Junior Associate', A:'Associate', SA:'Senior Associate', AM:'Associate Manager', M:'Manager', SM:'Senior Manager' };
+const THRESHOLDS  = { JA:70, A:72, SA:75, AM:78, M:82, SM:85 };
+const LEADERSHIP_WEIGHT = { JA:0, A:0, SA:.10, AM:.25, M:.40, SM:.50 };
 
 const SKILLS = [
-  {key:'sales',        label:'Sales Skills',       sub:'Pipeline, closures, upsell'},
-  {key:'reporting',    label:'Reporting',           sub:'Accuracy, timeliness, insight'},
-  {key:'maturity',     label:'Maturity',            sub:'Decision-making, judgement'},
-  {key:'independence', label:'Independence',        sub:'Ownership vs escalation'},
-  {key:'ai_adoption',  label:'AI Adoption',         sub:'Tools, initiatives, upskilling'},
-  {key:'cross_fn',     label:'Cross-functional',    sub:'Collaboration, bridging gaps'},
-  {key:'escalation',   label:'Escalation Quality',  sub:'When, how, resolution speed'},
-  {key:'communication',label:'Communication',       sub:'Clarity, follow-ups, async'},
-  {key:'enthusiasm',   label:'Enthusiasm',          sub:'Energy, initiative, ownership'},
+  { key:'sales',        label:'Sales & Revenue' },
+  { key:'reporting',    label:'Reporting & Analytics' },
+  { key:'maturity',     label:'Professional Maturity' },
+  { key:'independence', label:'Independence' },
+  { key:'ai',           label:'AI Adoption' },
+  { key:'xfunc',        label:'Cross-functional' },
+  { key:'escalation',   label:'Escalation Quality' },
+  { key:'comms',        label:'Communication' },
+  { key:'enthusiasm',   label:'Enthusiasm' },
 ];
 const LEADERSHIP = [
-  {key:'people',      label:'People Leadership',    sub:'Motivate, manage, retain'},
-  {key:'vision',      label:'Vision & Strategy',    sub:'Direction, purpose, long-range'},
-  {key:'stakeholder', label:'Stakeholder Influence',sub:'Trust, shape decisions'},
-  {key:'developing',  label:'Developing Others',    sub:'Coach, mentor, grow'},
-  {key:'resilience',  label:'Resilience & Grit',    sub:'Calm under pressure'},
-  {key:'decision',    label:'Decision Quality',     sub:'Speed, accuracy, ownership'},
+  { key:'people',      label:'People Leadership' },
+  { key:'vision',      label:'Vision & Strategy' },
+  { key:'stakeholder', label:'Stakeholder Influence' },
+  { key:'developing',  label:'Developing Others' },
+  { key:'resilience',  label:'Resilience & Grit' },
+  { key:'decision',    label:'Decision Quality' },
 ];
-const ACHIEVEMENT_CATS = ['Brand / Deal','AI Initiative','Cross-functional','Process Improvement','Mentoring','Other'];
 
-// ── Framework context per skill × level ────────────
+const AVATAR_COLORS = ['#6366F1','#10B981','#F59E0B','#F43F5E','#3B82F6','#8B5CF6','#06B6D4','#EC4899'];
+
+/* ── SKILL CONTEXT ──────────────────────────────────────── */
 const SKILL_CONTEXT = {
-  sales:{JA:'Shadow AMs; support pipeline basics',A:'Manage small accounts end-to-end',SA:'Own mid-tier accounts; upsell awareness',AM:'Team pipeline accountability; P&L awareness',M:'Full P&L ownership; strategic accounts',SM:'Segment strategy; enterprise relationships'},
-  reporting:{JA:'Daily reports using templates; accuracy',A:'Accurate reports; minimal errors',SA:'Insight-led; identify trends proactively',AM:'Coach team reporting; build dashboards',M:'Strategic narrative reporting to leadership',SM:'C-suite & board-level reporting'},
-  maturity:{JA:'Reactive; seek guidance frequently',A:'Growing maturity; handles routine issues',SA:'Calm under ambiguity; sets composed example',AM:'Sets tone for team; calm under pressure',M:'High business maturity; drives decisions',SM:'Organisational-level maturity & culture'},
-  independence:{JA:'~20% independent; expected at this level',A:'~40% independent; ask when unsure',SA:'~70% independent; escalate complex only',AM:'Delegates fully; owns all outcomes',M:'Full autonomy; sets team direction',SM:'Shapes org direction without input'},
-  ai_adoption:{JA:'Intro to AI tools; prompting basics',A:'AI for research & drafts',SA:'AI in daily workflow; 1 initiative owned',AM:'Drive team AI adoption; upskill others',M:'AI strategy for the group',SM:'AI transformation lead for business unit'},
-  cross_fn:{JA:'Shadow cross-fn calls',A:'Participate in cross-fn discussions',SA:'Lead a cross-fn project end-to-end',AM:'Bridge functions; resolve cross-fn conflicts',M:'Cross-org influence; trusted partner',SM:'Cross-company influence; joint priorities'},
-  escalation:{JA:'Learning when to escalate',A:'Recognise triggers; escalate with context',SA:'Strong judgement; resolves quickly',AM:'Escalation owner; coaches team',M:'Gatekeeper for function',SM:'Critical escalation calls across org'},
-  communication:{JA:'Clear writing; misses follow-ups sometimes',A:'Regular follow-ups; some gaps',SA:'Proactive; rare misses; strong async',AM:'Crisp async; no meaningful misses',M:'Executive-level communication',SM:'Board-level stakeholder management'},
-  enthusiasm:{JA:'High energy; eager to learn',A:'Self-motivated; meets targets',SA:'Drives team energy; mentors JAs',AM:'Inspires team; holds high standards',M:'Culture driver; attracts talent',SM:'Visionary; sets culture & direction'},
-  people:{JA:'No reports — observe team dynamics',A:'Informally guide peers on tasks',SA:'Sponsor JAs; first people-leadership signal',AM:'Manage 2–4 ICs; set expectations',M:'Lead 5–10; accountable for team culture',SM:'Lead managers; own org design'},
-  vision:{JA:'Follow team direction; no input expected',A:'Understand goals; connect work to strategy',SA:'Contribute to team strategy with perspective',AM:'Translate vision into team goals',M:'Co-own function strategy; 6–12 month plan',SM:'Own BU vision; 1–3 year strategy'},
-  stakeholder:{JA:'Build rapport with manager; low influence',A:'Build credibility with peers & one level up',SA:'Trusted voice in cross-fn; influence peers',AM:'Navigate cross-fn; shape decisions upward',M:'Influence exec stakeholders',SM:'Trusted advisor to C-suite'},
-  developing:{JA:'Being developed — be receptive & curious',A:'Seek mentorship; share learnings with JAs',SA:'Formally mentor JAs; run onboarding',AM:'Structured 1:1s; growth plans per direct',M:'Develop AMs; succession plan in place',SM:'Build leadership bench; coaching culture'},
-  resilience:{JA:'Recover with manager support — normal',A:'Handle routine pressure independently',SA:'Stay effective under pressure; rally team',AM:'Model calm under crisis; team\'s anchor',M:'Lead through ambiguity without losing team',SM:'Embody resilience; build resilient org'},
-  decision:{JA:'Defer to manager; low autonomy expected',A:'Low-stakes decisions solo; escalate larger',SA:'Own domain decisions; escalate complex',AM:'Team-level decisions confidently',M:'High-quality, high-speed; own outcomes fully',SM:'Set decision bar for the org'},
+  sales:        { JA:'Supports deals under guidance', A:'Manages pipeline independently', SA:'Owns revenue targets', AM:'Coaches team on sales', M:'Drives team revenue growth', SM:'Sets org-level sales strategy' },
+  reporting:    { JA:'Pulls standard reports', A:'Builds custom reports', SA:'Defines reporting frameworks', AM:'Derives insights for strategy', M:'Governs data quality across team', SM:'Creates org-wide reporting vision' },
+  maturity:     { JA:'Professional, follows norms', A:'Self-aware in feedback', SA:'Models maturity for juniors', AM:'Handles ambiguity calmly', M:'Leads through uncertainty', SM:'Shapes culture of maturity' },
+  independence: { JA:'Needs check-ins daily', A:'Works autonomously on tasks', SA:'Owns projects end-to-end', AM:'Directs others with autonomy', M:'Sets direction for function', SM:'Operates with full strategic independence' },
+  ai:           { JA:'Uses AI tools with help', A:'Integrates AI in daily workflow', SA:'Identifies AI opportunities', AM:'Leads AI initiatives for team', M:'Sets AI adoption strategy', SM:'Drives org-wide AI transformation' },
+  xfunc:        { JA:'Works within own team', A:'Collaborates across 1-2 functions', SA:'Partners across multiple teams', AM:'Drives cross-functional projects', M:'Aligns multiple functions', SM:'Builds cross-org partnerships' },
+  escalation:   { JA:'Escalates with context', A:'Proposes solutions when escalating', SA:'Resolves most issues independently', AM:'Guides team on escalation judgement', M:'Sets escalation framework', SM:'Rarely needs to escalate; resolves strategically' },
+  comms:        { JA:'Clear written & verbal basics', A:'Adapts style to audience', SA:'Influences through communication', AM:'Communicates vision to team', M:'Communicates externally & upward effectively', SM:'Represents org in high-stakes forums' },
+  enthusiasm:   { JA:'Shows up positively', A:'Proactively contributes ideas', SA:'Energises team & drives initiatives', AM:'Builds team morale and culture', M:'Champions culture across function', SM:'Is a brand ambassador for the org' },
+};
+const LEADERSHIP_CONTEXT = {
+  people:      { JA:'N/A', A:'N/A', SA:'Begins mentoring juniors', AM:'Manages 1-3 direct reports', M:'Leads team of 5-10', SM:'Leads managers' },
+  vision:      { JA:'N/A', A:'N/A', SA:'Understands team goals', AM:'Sets team objectives', M:'Drives function strategy', SM:'Shapes org direction' },
+  stakeholder: { JA:'N/A', A:'N/A', SA:'Manages key stakeholders', AM:'Influences senior stakeholders', M:'Partners with leadership', SM:'Board-level relationships' },
+  developing:  { JA:'N/A', A:'N/A', SA:'Provides peer coaching', AM:'Runs development plans', M:'Builds leaders within team', SM:'Creates talent pipeline' },
+  resilience:  { JA:'N/A', A:'N/A', SA:'Bounces back quickly', AM:'Models resilience under pressure', M:'Sustains team performance in crisis', SM:'Organisational resilience architect' },
+  decision:    { JA:'N/A', A:'N/A', SA:'Makes sound independent calls', AM:'Decides under ambiguity', M:'High-stakes decision-making', SM:'Enterprise-level decisions' },
 };
 
-// ── Suggested solutions per skill × level ─────────
+/* ── DEVELOPMENT SOLUTIONS ──────────────────────────────── */
 const SKILL_SOLUTIONS = {
-  sales:{JA:'Shadow 3 AM calls; write key observations',A:'Close 1 small account solo; debrief with manager',SA:'Add upsell tracking to pipeline; review weekly',AM:'Run team pipeline review; coach on deal quality',M:'Review P&L vs targets; identify top 3 levers',SM:'Define segment strategy; build flagship account plan'},
-  reporting:{JA:'Use template daily for 2 weeks; zero missed fields',A:'Add 1 insight line to each report this week',SA:'Pick 1 data trend; present at stand-up',AM:'Run 30-min reporting clinic with the team',M:'Redesign 1 report to be decision-ready',SM:'Commission external benchmarking for board'},
-  maturity:{JA:'Write your reasoning before escalating anything',A:'Handle 2 routine ambiguous situations solo',SA:'Document 3 decisions made under ambiguity',AM:'Post-mortem 1 crisis with written lessons-learned',M:'Draft a decision-rights document for your team',SM:'Run a leadership retrospective on decision quality'},
-  independence:{JA:'Complete 1 task fully solo this week',A:'Block manager check-ins to 1/week on routine tasks',SA:'Spend 1 week escalating nothing routine',AM:'Delegate 2 tasks you currently own to a direct',M:'Review where team still escalates to you unnecessarily',SM:'Audit org-wide decision rights; push ownership down'},
-  ai_adoption:{JA:'Spend 30 min/day on an AI tool this week',A:'Use AI for a research task; share prompt with team',SA:'Start an AI initiative: document problem + outcome',AM:'Run a 1-hour AI tools session with your team',M:'Build team AI adoption plan with 2 measurable outcomes',SM:'Commission AI transformation roadmap for BU'},
-  cross_fn:{JA:'Attend 1 cross-fn meeting; contribute 1 data point',A:'Share an update with 1 adjacent team proactively',SA:'Lead a joint session with 1 cross-fn partner',AM:'Resolve 1 cross-fn friction before it escalates',M:'Broker a joint OKR with an adjacent team lead',SM:'Initiate a company-wide cross-fn working group'},
-  escalation:{JA:'Before escalating, write: tried / failed / need',A:'Review last 3 escalations — any solvable solo?',SA:'Document your escalation framework; share with junior',AM:'Review team escalations monthly; find patterns',M:'Set team escalation standards; review quarterly',SM:'Define escalation doctrine for the org'},
-  communication:{JA:'Set daily follow-up reminder; nothing open >48h',A:'Audit last week\'s comms — follow up anything stale',SA:'Write 1 async update per week for key stakeholders',AM:'Introduce a team comms standard (async-first)',M:'Prepare a monthly stakeholder comms plan',SM:'Draft a comms framework for external stakeholders'},
-  enthusiasm:{JA:'Volunteer for 1 stretch task this week',A:'Share a team win in the channel this week',SA:'Mentor a JA for 30 min; log it formally',AM:'Run an energy check-in with your team',M:'Plan 1 cultural ritual or recognition moment',SM:'Articulate your team\'s purpose story to the org'},
-  people:{JA:'Observe how your manager runs 1:1s; note 3 things',A:'Help a peer on something they\'re struggling with',SA:'Run a structured 30-min 1:1 with a JA',AM:'Write a growth plan for each direct this quarter',M:'Identify succession candidate; start dev plan',SM:'Run a talent review and leadership offsite'},
-  vision:{JA:'Read team OKRs; write how your work maps to them',A:'Share perspective on 1 priority in next planning',SA:'Write 1-page view on where your area heads in 12M',AM:'Present a team-level strategy to your manager',M:'Co-author the function\'s 6-month strategic plan',SM:'Draft BU 3-year vision; share at leadership forum'},
-  stakeholder:{JA:'Send 1 proactive update to manager (no prompting)',A:'Intro yourself to 1 stakeholder outside your team',SA:'Do stakeholder mapping; identify top 5',AM:'Build stakeholder communication calendar for the quarter',M:'Request a skip-level; come with an agenda',SM:'Schedule quarterly advisory sessions with C-suite'},
-  developing:{JA:'Ask for 1 specific piece of development feedback today',A:'Share 1 learning with a JA peer this cycle',SA:'Set up a monthly mentoring touchpoint with a JA',AM:'Write a 90-day dev plan for each direct report',M:'Identify 2 high-potential people; sponsor their visibility',SM:'Run formal talent review; identify succession depth'},
-  resilience:{JA:'After a setback: write what happened + next step',A:'Handle 1 stressful situation solo before flagging',SA:'Rally team after a miss — write debrief + forward plan',AM:'Share a resilience story with team to normalise it',M:'Lead team through ambiguous change with clear comms',SM:'Publish your personal resilience principles for the org'},
-  decision:{JA:'Write your best answer before asking manager',A:'Make 3 low-stakes decisions solo this week',SA:'Document 3 decisions you owned; share rationale',AM:'Run team decision review — where are you deciding for others?',M:'Set a 48h decision-turnaround standard for your team',SM:'Define decision rights across your leadership layer'},
+  sales:        { JA:'Shadow 2 senior calls/week', A:'Own 3 accounts end-to-end', SA:'Set and hit personal revenue target', AM:'Run weekly pipeline reviews with team', M:'Design team incentive structure', SM:'Create sales playbook for org' },
+  reporting:    { JA:'Complete Data Basics course', A:'Build one dashboard from scratch', SA:'Define team reporting SLAs', AM:'Present data insights to leadership monthly', M:'Audit team data quality quarterly', SM:'Roll out org-wide analytics platform' },
+  maturity:     { JA:'Seek feedback after each client call', A:'Practice structured self-reflection weekly', SA:'Lead by example in difficult conversations', AM:'Take on a stretch assignment outside comfort zone', M:'Coach team through change', SM:'Define maturity standards for org' },
+  independence: { JA:'Complete one task with zero check-ins', A:'Own a week-long project solo', SA:'Deliver quarter goal with minimal oversight', AM:'Set OKRs for team independently', M:'Define function roadmap', SM:'Lead org-wide initiative autonomously' },
+  ai:           { JA:'Try 2 new AI tools this month', A:'Replace one manual process with AI', SA:'Run team demo of AI workflow', AM:'Set AI adoption goal for team', M:'Launch AI pilot project', SM:'Publish AI strategy for org' },
+  xfunc:        { JA:'Join one cross-team meeting', A:'Collaborate on shared project', SA:'Drive one cross-functional initiative', AM:'Lead cross-team working group', M:'Own cross-functional OKRs', SM:'Build partnership framework across functions' },
+  escalation:   { JA:'Always include context + attempted solution', A:'Present 2 options when escalating', SA:'Resolve before escalating by default', AM:'Create escalation decision tree for team', M:'Monthly review of team escalation patterns', SM:'Set escalation policy for org' },
+  comms:        { JA:'Write one crisp email per stakeholder type', A:'Present in 2 cross-team meetings', SA:'Create communications template for team', AM:'Run monthly team all-hands', M:'Quarterly leadership update deck', SM:'Keynote at org all-hands' },
+  enthusiasm:   { JA:'Volunteer for one initiative', A:'Submit one improvement idea per month', SA:'Champion a new initiative from scratch', AM:'Create team recognition rituals', M:'Launch culture programme', SM:'Be visible face of org values' },
+};
+const LEADERSHIP_SOLUTIONS = {
+  people:      { SA:'Start 1:1s with one junior weekly', AM:'Read "Radical Candor", give structured feedback', M:'Complete leadership coaching programme', SM:'Build succession plan for each direct report' },
+  vision:      { SA:'Write team vision doc for next quarter', AM:'Run team strategy session', M:'Create 6-month function roadmap', SM:'Co-create org 3-year strategy with exec' },
+  stakeholder: { SA:'Map top 5 stakeholders and meet monthly', AM:'Present to VP-level quarterly', M:'Join cross-org steering committee', SM:'Build exec relationships proactively' },
+  developing:  { SA:'Create development plan for one junior', AM:'Run monthly skills workshops', M:'Design team rotation programme', SM:'Launch mentorship programme across org' },
+  resilience:  { SA:'Journal after setbacks; identify patterns', AM:'Lead through one major change project', M:'Run resilience workshops for team', SM:'Shape org change management capability' },
+  decision:    { SA:'Document reasoning for major decisions', AM:'Use RACI for all team decisions', M:'Review decision quality monthly in retros', SM:'Implement decision-making framework org-wide' },
 };
 
-// ── Default seed scores ─────────────────────────
+/* ── DEFAULT SCORES BY LEVEL ────────────────────────────── */
 const DEFAULT_SCORES = {
-  JA:{sales:35,reporting:38,maturity:30,independence:25,ai_adoption:30,cross_fn:25,escalation:28,communication:40,enthusiasm:65,people:0,vision:0,stakeholder:0,developing:0,resilience:35,decision:25},
-  A: {sales:52,reporting:55,maturity:50,independence:48,ai_adoption:52,cross_fn:48,escalation:50,communication:58,enthusiasm:70,people:0,vision:0,stakeholder:0,developing:0,resilience:50,decision:45},
-  SA:{sales:68,reporting:70,maturity:65,independence:72,ai_adoption:68,cross_fn:65,escalation:68,communication:72,enthusiasm:75,people:55,vision:50,stakeholder:55,developing:52,resilience:65,decision:60},
-  AM:{sales:76,reporting:74,maturity:72,independence:80,ai_adoption:75,cross_fn:74,escalation:76,communication:78,enthusiasm:80,people:68,vision:64,stakeholder:66,developing:65,resilience:72,decision:70},
-  M: {sales:84,reporting:82,maturity:80,independence:90,ai_adoption:82,cross_fn:80,escalation:84,communication:85,enthusiasm:85,people:78,vision:76,stakeholder:78,developing:75,resilience:80,decision:82},
-  SM:{sales:92,reporting:90,maturity:90,independence:95,ai_adoption:90,cross_fn:90,escalation:92,communication:92,enthusiasm:92,people:88,vision:86,stakeholder:88,developing:85,resilience:88,decision:90},
+  JA: { sales:48, reporting:45, maturity:50, independence:42, ai:55, xfunc:40, escalation:48, comms:50, enthusiasm:60 },
+  A:  { sales:58, reporting:55, maturity:60, independence:55, ai:62, xfunc:52, escalation:58, comms:62, enthusiasm:68 },
+  SA: { sales:68, reporting:65, maturity:70, independence:66, ai:72, xfunc:64, escalation:68, comms:70, enthusiasm:75 },
+  AM: { sales:75, reporting:72, maturity:78, independence:74, ai:78, xfunc:72, escalation:75, comms:76, enthusiasm:80 },
+  M:  { sales:82, reporting:80, maturity:85, independence:82, ai:84, xfunc:80, escalation:82, comms:84, enthusiasm:88 },
+  SM: { sales:88, reporting:86, maturity:90, independence:88, ai:90, xfunc:86, escalation:88, comms:90, enthusiasm:92 },
+};
+const DEFAULT_LEADERSHIP = {
+  JA: { people:0,  vision:0,  stakeholder:0,  developing:0,  resilience:0,  decision:0  },
+  A:  { people:0,  vision:0,  stakeholder:0,  developing:0,  resilience:0,  decision:0  },
+  SA: { people:58, vision:52, stakeholder:55, developing:50, resilience:62, decision:58 },
+  AM: { people:70, vision:65, stakeholder:68, developing:64, resilience:72, decision:70 },
+  M:  { people:80, vision:76, stakeholder:78, developing:75, resilience:82, decision:79 },
+  SM: { people:88, vision:84, stakeholder:86, developing:83, resilience:88, decision:86 },
 };
 
+/* ── SEED DATA ──────────────────────────────────────────── */
 const SEED_MEMBERS = [
-  {name:'Priya Sharma',level:'SA'},{name:'Rohan Mehta',level:'A'},
-  {name:'Ananya Iyer',level:'AM'},{name:'Karan Bose',level:'JA'},
-  {name:'Divya Nair',level:'SA'},{name:'Arjun Kapoor',level:'M'},
-  {name:'Sneha Reddy',level:'A'},{name:'Vikram Joshi',level:'AM'},
+  { id:'m1', name:'Priya Sharma',  level:'SA', pin:'0000' },
+  { id:'m2', name:'Rohan Mehta',   level:'A',  pin:'0000' },
+  { id:'m3', name:'Ananya Iyer',   level:'AM', pin:'0000' },
+  { id:'m4', name:'Karan Patel',   level:'JA', pin:'0000' },
+  { id:'m5', name:'Divya Nair',    level:'SA', pin:'0000' },
+  { id:'m6', name:'Arjun Singh',   level:'M',  pin:'0000' },
+  { id:'m7', name:'Sneha Rao',     level:'A',  pin:'0000' },
+  { id:'m8', name:'Vikram Gupta',  level:'AM', pin:'0000' },
 ];
 
-function makeCycle(level, offsetDays=0){
-  const base = DEFAULT_SCORES[level];
-  const j = k => Math.min(100,Math.max(0,base[k]+Math.round((Math.random()-.5)*10)));
-  const skills={};  SKILLS.forEach(s=>skills[s.key]=j(s.key));
-  const leadership={};LEADERSHIP.forEach(l=>leadership[l.key]=j(l.key));
-  const d=new Date(); d.setDate(d.getDate()-offsetDays);
-  return {date:d.toISOString().slice(0,10),skills,leadership,note:'',overall:calcOverall(skills,leadership,level),skillComments:{},devPlan:[]};
-}
-function calcOverall(skills,leadership,level){
-  const sw=LEADERSHIP_WEIGHT[level]||0;
-  const avgS=Object.values(skills).reduce((a,b)=>a+b,0)/Object.values(skills).length;
-  const avgL=Object.values(leadership).reduce((a,b)=>a+b,0)/Object.values(leadership).length;
-  return Math.round(avgS*(1-sw)+avgL*sw);
-}
+/* ── STORAGE ────────────────────────────────────────────── */
+function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; } }
+function save(key, val)  { localStorage.setItem(key, JSON.stringify(val)); }
+function getMembers()    { return load('gjc_members', []); }
+function saveMembers(m)  { save('gjc_members', m); }
+function getPending()    { return load('gjc_pending', []); }
+function savePending(p)  { save('gjc_pending', p); }
+function getApproved()   { return load('gjc_approved', []); }
+function saveApproved(a) { save('gjc_approved', a); }
 
-// ── Storage ─────────────────────────────────────
-const getMembers  = ()=>JSON.parse(localStorage.getItem('gjc_members')||'[]');
-const getPending  = ()=>JSON.parse(localStorage.getItem('gjc_pending')||'[]');
-const getApproved = ()=>JSON.parse(localStorage.getItem('gjc_approved')||'[]');
-const getAuth     = ()=>JSON.parse(localStorage.getItem('gjc_auth')||'{}');
-const saveMembers  = d=>localStorage.setItem('gjc_members',JSON.stringify(d));
-const savePending  = d=>localStorage.setItem('gjc_pending',JSON.stringify(d));
-const saveApproved = d=>localStorage.setItem('gjc_approved',JSON.stringify(d));
-const saveAuth     = d=>localStorage.setItem('gjc_auth',JSON.stringify(d));
-
-function seedIfEmpty(){
-  if(localStorage.getItem('gjc_seeded')) return;
-  const members=SEED_MEMBERS.map((m,i)=>({
-    id:'mbr_'+i,name:m.name,level:m.level,
-    history:[84,70,56,42,28,14].map(d=>makeCycle(m.level,d)),
-  }));
-  saveMembers(members);savePending([]);saveApproved([]);
-  const auth={manager:{pin:'1234'},members:{}};
-  members.forEach(m=>auth.members[m.id]={pin:'0000'});
-  saveAuth(auth);
-  localStorage.setItem('gjc_seeded','1');
+function initData() {
+  let members = getMembers();
+  if (!members.length) {
+    members = SEED_MEMBERS.map((s, i) => {
+      const snaps = [];
+      // seed 4 historical snapshots spread over ~3 months
+      [90, 60, 30, 0].forEach(daysAgo => snaps.push(makeSnap(s.level, daysAgo)));
+      return { ...s, color: AVATAR_COLORS[i % AVATAR_COLORS.length], history: snaps };
+    });
+    saveMembers(members);
+  } else {
+    members = members.map((m, i) => ({ color: AVATAR_COLORS[i % AVATAR_COLORS.length], ...m }));
+    saveMembers(members);
+  }
 }
 
-// ── Helpers ─────────────────────────────────────
-function scoreStatus(s){return s<45?'needs':s<70?'dev':s<85?'track':'high';}
-function statusLabel(s){return {needs:'Needs Attention',dev:'Developing',track:'On Track',high:'High Performer'}[s];}
-function chipClass(s){return {needs:'chip chip-needs',dev:'chip chip-dev',track:'chip chip-track',high:'chip chip-high'}[s];}
-function barColor(s){return {needs:'#DC2626',dev:'#D97706',track:'#059669',high:'#7C3AED'}[s];}
-function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function nextLevel(lv){const i=LEVELS.indexOf(lv);return i<LEVELS.length-1?LEVELS[i+1]:null;}
-function targetLevel(lv){const i=LEVELS.indexOf(lv);return LEVELS[Math.min(i+2,LEVELS.length-1)];}
-function getCtx(key,level){return (SKILL_CONTEXT[key]&&SKILL_CONTEXT[key][level])||'';}
-function isPromoCandidate(m){
-  if(!THRESHOLDS[m.level]) return false;
-  const last3=m.history.slice(-3);
-  return last3.length>=3&&last3.every(c=>c.overall>=THRESHOLDS[m.level]&&Object.values(c.skills).every(v=>v>=45));
-}
-
-// ── Toast ────────────────────────────────────────
-function toast(msg,type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='show'+(type?' t-'+type:'');
-  clearTimeout(t._t); t._t=setTimeout(()=>t.className='',2800);
-}
-
-// ── Chart instances ──────────────────────────────
-let trendChart=null, radarChart=null;
-
-function filterByPeriod(history,period){
-  if(period==='all') return history;
-  const now=new Date(), cutoff=new Date();
-  if(period==='w2') cutoff.setDate(now.getDate()-14);
-  else if(period==='m1') cutoff.setMonth(now.getMonth()-1);
-  else if(period==='m3') cutoff.setMonth(now.getMonth()-3);
-  else if(period==='m6') cutoff.setMonth(now.getMonth()-6);
-  else if(period==='y1') cutoff.setFullYear(now.getFullYear()-1);
-  const filtered=history.filter(c=>new Date(c.date)>=cutoff);
-  return filtered.length>=2?filtered:history.slice(-Math.max(2,Math.ceil(history.length/2)));
-}
-
-function drawLineChart(canvasId,history,level,period='all'){
-  const ctx=document.getElementById(canvasId); if(!ctx) return;
-  if(trendChart){trendChart.destroy();trendChart=null;}
-  const data=filterByPeriod(history,period);
-  const scores=data.map(c=>c.overall);
-  const labels=data.map(c=>c.date.slice(5));
-  const thresh=THRESHOLDS[level];
-  const datasets=[{
-    label:'Score',data:scores,
-    borderColor:'#7C3AED',backgroundColor:'rgba(124,58,237,.07)',
-    pointBackgroundColor:scores.map(v=>barColor(scoreStatus(v))),
-    pointRadius:5,tension:.4,fill:true,borderWidth:2,
-  }];
-  if(thresh) datasets.push({
-    label:'Threshold',data:Array(scores.length).fill(thresh),
-    borderColor:'rgba(220,38,38,.5)',borderDash:[5,4],
-    pointRadius:0,borderWidth:1.5,fill:false,
+function makeSnap(level, daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const skills = {};
+  const leadership = {};
+  Object.keys(DEFAULT_SCORES[level]).forEach(k => {
+    skills[k] = Math.min(100, Math.max(0, DEFAULT_SCORES[level][k] + Math.round((Math.random() - .5) * 12)));
   });
-  trendChart=new Chart(ctx,{
-    type:'line',data:{labels,datasets},
-    options:{
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{min:0,max:100,ticks:{stepSize:25,font:{size:10}},grid:{color:'#F3F4F6'}},
-        x:{ticks:{font:{size:10},maxRotation:0},grid:{display:false}},
+  Object.keys(DEFAULT_LEADERSHIP[level]).forEach(k => {
+    const base = DEFAULT_LEADERSHIP[level][k];
+    leadership[k] = base > 0 ? Math.min(100, Math.max(0, base + Math.round((Math.random() - .5) * 12))) : 0;
+  });
+  return { date: d.toISOString(), skills, leadership, note: '', comments: {}, overall: calcOverall(skills, leadership, level) };
+}
+
+/* ── SCORE HELPERS ──────────────────────────────────────── */
+function avg(obj) {
+  const vals = Object.values(obj).filter(v => v > 0);
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+}
+function calcOverall(skills, leadership, level) {
+  const w = LEADERSHIP_WEIGHT[level] || 0;
+  if (w === 0) return avg(skills);
+  const ldrVals = Object.values(leadership).filter(v => v > 0);
+  const avgL = ldrVals.length ? ldrVals.reduce((a, b) => a + b, 0) / ldrVals.length : 0;
+  return Math.round(avg(skills) * (1 - w) + avgL * w);
+}
+function scoreStatus(s) {
+  if (s >= 85) return 'high';
+  if (s >= 70) return 'track';
+  if (s >= 45) return 'dev';
+  return 'needs';
+}
+function statusLabel(s) {
+  return { high:'High Performer', track:'On Track', dev:'Developing', needs:'Needs Attention' }[scoreStatus(s)];
+}
+function statusClass(s) {
+  return { high:'st-high', track:'st-track', dev:'st-dev', needs:'st-needs' }[scoreStatus(s)];
+}
+function statusColor(s) {
+  return { high:'#10B981', track:'#3B82F6', dev:'#F59E0B', needs:'#F43F5E' }[scoreStatus(s)];
+}
+function skColor(v) {
+  if (v >= 85) return ['#10B981', '#ECFDF5'];
+  if (v >= 70) return ['#3B82F6', '#EFF6FF'];
+  if (v >= 45) return ['#F59E0B', '#FFFBEB'];
+  return ['#F43F5E', '#FFF1F2'];
+}
+function isPromoCandidate(member) {
+  const h = member.history;
+  if (h.length < 3) return false;
+  const last3 = h.slice(-3);
+  const thr = THRESHOLDS[member.level];
+  if (!last3.every(s => s.overall >= thr)) return false;
+  return !Object.values(last3[last3.length - 1].skills).some(v => v < 45);
+}
+function initials(name) { return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
+function fmtDate(iso)   { return new Date(iso).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); }
+
+/* ── ROUTER ─────────────────────────────────────────────── */
+let currentRole = 'manager';
+function setRole(role) {
+  currentRole = role;
+  ['manager','member','peer','workflow'].forEach(r => {
+    document.getElementById('view-' + r).style.display = r === role ? '' : 'none';
+    document.getElementById('tab-' + r)?.classList.toggle('active', r === role);
+  });
+  if (role === 'manager')  renderManager();
+  if (role === 'member')   renderMember();
+  if (role === 'peer')     renderPeer();
+  if (role === 'workflow') renderWorkflow();
+}
+
+/* ── TOAST ──────────────────────────────────────────────── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ════════════════════════════════════════════════════════
+   MANAGER VIEW
+   ════════════════════════════════════════════════════════ */
+let teamChartInst   = null;
+let radarChartInst  = null;
+let selectedMemberId = null;
+let chartPeriod     = 'all';
+
+function renderManager() {
+  const el = document.getElementById('view-manager');
+  if (!sessionStorage.getItem('gjc_mgr_authed')) { renderManagerPin(el); return; }
+  initData();
+  const members = getMembers();
+  el.innerHTML = `<div class="mgr-page">
+    <div id="kpi-section"></div>
+    <div id="team-chart-section"></div>
+    <div id="team-scoring-section"></div>
+    <div id="deep-dive-section"></div>
+    <div id="pending-section"></div>
+  </div>`;
+  buildKPISection(members);
+  buildTeamChartSection(members);
+  buildTeamScoringSection(members);
+  buildPendingSection();
+}
+
+/* ── KPI CUTS ───────────────────────────────────────────── */
+function buildKPISection(members) {
+  const scores = members.map(m => m.history[m.history.length - 1]?.overall ?? 0);
+  const teamAvg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const high   = scores.filter(s => s >= 85).length;
+  const track  = scores.filter(s => s >= 70 && s < 85).length;
+  const needs  = scores.filter(s => s < 70).length;
+  const promo  = members.filter(isPromoCandidate).length;
+
+  document.getElementById('kpi-section').innerHTML = `
+    <div class="section-label">Dashboard Cuts</div>
+    <div class="kpi-row">
+      <div class="kpi-card" style="--accent:#6366F1">
+        <div class="kpi-label">Team Average</div>
+        <div class="kpi-value">${teamAvg}<span style="font-size:16px;font-weight:500">%</span></div>
+        <div class="kpi-sub">${members.length} members tracked</div>
+      </div>
+      <div class="kpi-card" style="--accent:#10B981">
+        <div class="kpi-label">High Performers</div>
+        <div class="kpi-value">${high}</div>
+        <div class="kpi-sub">Score ≥ 85%</div>
+        <span class="kpi-badge" style="background:#ECFDF5;color:#065F46">${Math.round(high/members.length*100)}% of team</span>
+      </div>
+      <div class="kpi-card" style="--accent:#3B82F6">
+        <div class="kpi-label">On Track</div>
+        <div class="kpi-value">${track}</div>
+        <div class="kpi-sub">Score 70–84%</div>
+        <span class="kpi-badge" style="background:#EFF6FF;color:#1D4ED8">${Math.round(track/members.length*100)}% of team</span>
+      </div>
+      <div class="kpi-card" style="--accent:#F43F5E">
+        <div class="kpi-label">Needs Attention</div>
+        <div class="kpi-value">${needs}</div>
+        <div class="kpi-sub">Score &lt; 70%</div>
+        ${needs ? `<span class="kpi-badge" style="background:#FFF1F2;color:#9F1239">⚠ Review needed</span>` : `<span class="kpi-badge" style="background:#ECFDF5;color:#065F46">✓ All clear</span>`}
+      </div>
+      <div class="kpi-card" style="--accent:#F59E0B">
+        <div class="kpi-label">Promo Candidates</div>
+        <div class="kpi-value">${promo}</div>
+        <div class="kpi-sub">Threshold sustained 3+ cycles</div>
+        ${promo ? `<span class="kpi-badge" style="background:#FEF3C7;color:#92400E">🏆 Ready to promote</span>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ── TEAM CHART ─────────────────────────────────────────── */
+function buildTeamChartSection(members) {
+  const tabs = ['2W','1M','3M','6M','1Y','All'];
+  document.getElementById('team-chart-section').innerHTML = `
+    <div class="section-label">Team Progress</div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Score Trend — All Members</div>
+        <div class="period-tabs">
+          ${tabs.map(p => `<button class="period-tab${(chartPeriod===p.toLowerCase()||(chartPeriod==='all'&&p==='All'))?' active':''}" onclick="setTeamPeriod('${p.toLowerCase()}')">${p}</button>`).join('')}
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="teamChart"></canvas></div>
+    </div>`;
+  drawTeamChart(members);
+}
+
+function setTeamPeriod(p) {
+  chartPeriod = p;
+  buildTeamChartSection(getMembers());
+}
+
+function drawTeamChart(members) {
+  if (teamChartInst) { teamChartInst.destroy(); teamChartInst = null; }
+  const ctx = document.getElementById('teamChart')?.getContext('2d');
+  if (!ctx) return;
+
+  const cutoff = new Date();
+  if      (chartPeriod === '2w') cutoff.setDate(cutoff.getDate() - 14);
+  else if (chartPeriod === '1m') cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (chartPeriod === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+  else if (chartPeriod === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+  else if (chartPeriod === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+  else cutoff.setFullYear(2000);
+
+  const datasets = members.map((m, i) => {
+    let filtered = m.history.filter(h => new Date(h.date) >= cutoff);
+    if (filtered.length < 2) filtered = m.history.slice(-4);
+    return {
+      label: m.name.split(' ')[0],
+      data: filtered.map(h => ({
+        x: new Date(h.date).toLocaleDateString('en-IN', { day:'numeric', month:'short' }),
+        y: h.overall,
+      })),
+      borderColor: m.color || AVATAR_COLORS[i % AVATAR_COLORS.length],
+      backgroundColor: (m.color || AVATAR_COLORS[i % AVATAR_COLORS.length]) + '18',
+      tension: .4, borderWidth: 2, pointRadius: 4, fill: false,
+    };
+  });
+
+  teamChartInst = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { position:'bottom', labels:{ usePointStyle:true, padding:14, font:{size:11} } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}%` } },
       },
-      animation:{duration:300},
-    }
-  });
-}
-
-function drawRadar(canvasId,skills){
-  const ctx=document.getElementById(canvasId); if(!ctx) return;
-  if(radarChart){radarChart.destroy();radarChart=null;}
-  radarChart=new Chart(ctx,{
-    type:'radar',
-    data:{
-      labels:SKILLS.map(s=>s.label.split(' ')[0]),
-      datasets:[{data:SKILLS.map(s=>skills[s.key]||0),backgroundColor:'rgba(124,58,237,.12)',borderColor:'#7C3AED',pointBackgroundColor:'#7C3AED',borderWidth:2,pointRadius:3}],
+      scales: {
+        x: { type:'category', grid:{display:false}, ticks:{font:{size:11}} },
+        y: { min:0, max:100, grid:{color:'#F1F5F9'}, ticks:{ callback:v=>v+'%', font:{size:11} } },
+      },
     },
-    options:{plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:9}},pointLabels:{font:{size:10}}}},animation:{duration:280}},
   });
 }
 
-// ─────────────────────────────────────────────────
-//  JOURNEY MAP v2
-// ─────────────────────────────────────────────────
-function buildJourneyMap(member){
-  const curIdx=LEVELS.indexOf(member.level);
-  const last=member.history[member.history.length-1]||{};
-  const score=last.overall||0;
-  const thresh=THRESHOLDS[member.level];
-  const nextLv=nextLevel(member.level);
-  const tgtLv=targetLevel(member.level);
-  const progressPct=thresh?Math.min(100,Math.round((score/thresh)*100)):100;
-
-  const parts=LEVELS.map((lv,i)=>{
-    const isDone=i<curIdx;
-    const isCurrent=i===curIdx;
-    const isNextStep=lv===nextLv;
-    const isGoal=lv===tgtLv&&lv!==nextLv;
-    const isConnector=i<LEVELS.length-1;
-    const t=THRESHOLDS[lv];
-
-    let nodeClass='jm-node';
-    let tag='';
-    if(isDone)    {nodeClass+=' done'; }
-    if(isCurrent) {nodeClass+=' current'; tag=`<div class="jm-tag tag-current">Current</div>`;}
-    if(isNextStep){nodeClass+=' next-step'; tag=`<div class="jm-tag tag-next">Next step</div>`;}
-    if(isGoal)    {nodeClass+=' goal'; tag=`<div class="jm-tag tag-goal">Goal</div>`;}
-
-    const scoreLineHTML=isCurrent&&thresh
-      ?`<div class="jm-score-line">${score}%<span class="jm-thresh-line">/${thresh}%</span></div>`:'';
-    const gapHTML=isNextStep&&t
-      ?`<div class="jm-gap-line">+${Math.max(0,t-score)}pts needed</div>`:'';
-    const threshHTML=!isCurrent&&t
-      ?`<div class="jm-thresh-line">${t}%</div>`:'';
-
-    const progressBar=isCurrent&&thresh?`
-      <div class="jm-progress-bar"><div class="jm-progress-fill" style="width:${progressPct}%"></div></div>`:''
-
-    const connClass='jm-conn '+(isDone?'conn-done':isCurrent?'conn-partial':'conn-future');
-
+/* ── TEAM SCORING TABLE ─────────────────────────────────── */
+function buildTeamScoringSection(members) {
+  const rows = members.map(m => {
+    const latest = m.history[m.history.length - 1] || {};
+    const score  = latest.overall ?? 0;
+    const [col]  = skColor(score);
+    const isPromo = isPromoCandidate(m);
     return `
-      <div class="jm-step">
-        <div class="${nodeClass}">${isDone?'✓':lv}</div>
-        ${progressBar}
-        <div class="jm-label">
-          ${tag}
-          <div class="jm-lname">${LEVEL_NAMES[lv].replace('Junior ','Jr ').replace('Associate ','Assoc. ').replace('Senior ','Sr ')}</div>
-          ${scoreLineHTML}${gapHTML}${threshHTML}
-        </div>
-      </div>
-      ${isConnector?`<div class="${connClass}"></div>`:''}`;
-  }).join('');
-
-  return `<div class="jmap">${parts}</div>`;
-}
-
-// ─────────────────────────────────────────────────
-//  SKILL ROWS (inline: label | slider | score | comment)
-// ─────────────────────────────────────────────────
-function buildSkillRows(skills,leadership,level,skillComments={}){
-  const lw=LEADERSHIP_WEIGHT[level]||0;
-  const isLocked=lw===0;
-
-  const skillHTML=SKILLS.map(s=>{
-    const v=skills[s.key]||0;
-    const isWeak=v<70;
-    const st=scoreStatus(v);
-    const ctx=getCtx(s.key,level);
-    const comment=(skillComments[s.key]||'').replace(/"/g,'&quot;');
-    return `
-      <div class="sk-row ${isWeak?'sk-weak':''}" id="row_${s.key}">
-        <div class="sk-meta">
-          <div class="sk-name">${s.label}</div>
-          <div class="sk-sub">${s.sub}</div>
-          <div class="sk-ctx">${ctx}</div>
-        </div>
-        <input type="range" class="sk-slider" min="0" max="100" value="${v}"
-               id="sk_${s.key}" oninput="syncSlider(this)">
-        <div class="sk-score" id="sv_${s.key}" style="color:${barColor(st)}">${v}%</div>
-        <input type="text" class="sk-comment ${isWeak?'req':''}" id="sc_${s.key}"
-               placeholder="${isWeak?'⚠ Reason required…':'Note (optional)…'}"
-               value="${comment}">
-      </div>`;
-  }).join('');
-
-  const ldHTML=LEADERSHIP.map(l=>{
-    const v=leadership[l.key]||0;
-    const isWeak=!isLocked&&v<70;
-    const st=scoreStatus(v);
-    const ctx=isLocked?'Observed informally — not formally scored at JA/A':getCtx(l.key,level);
-    const comment=(skillComments[l.key]||'').replace(/"/g,'&quot;');
-    return `
-      <div class="sk-row ${isLocked?'sk-locked':''} ${!isLocked&&isWeak?'sk-weak':''}" id="row_${l.key}">
-        <div class="sk-meta">
-          <div class="sk-name">${l.label}</div>
-          <div class="sk-sub">${l.sub}</div>
-          <div class="sk-ctx ${isLocked?'sk-ctx-locked':''}">${ctx}</div>
-        </div>
-        <input type="range" class="sk-slider" min="0" max="100" value="${v}"
-               id="lk_${l.key}" oninput="syncSlider(this)" ${isLocked?'disabled':''}>
-        <div class="sk-score" id="lv_${l.key}" style="color:${isLocked?'#9CA3AF':barColor(st)}">${v}%</div>
-        <input type="text" class="sk-comment ${!isLocked&&isWeak?'req':''}" id="sc_${l.key}"
-               placeholder="${!isLocked&&isWeak?'⚠ Reason required…':'Note (optional)…'}"
-               value="${comment}" ${isLocked?'disabled':''}>
-      </div>`;
-  }).join('');
-
-  const lwPct=Math.round(lw*100);
-  const ldTitle=isLocked
-    ?`<span class="sth-locked">Not formally scored at JA/A — observe informally</span>`
-    :`<span class="sth-weight">Weighted ${lwPct}% of overall</span>`;
-
-  return `
-    <div class="section-card">
-      <div class="skill-section-hd">
-        <span class="sth-title">9 Skill Dimensions</span>
-        <span style="font-size:.72rem;color:var(--g400)">Scores below 70% need a written reason</span>
-      </div>
-      <div class="skill-table">${skillHTML}</div>
-      <div class="skill-section-hd" style="margin-top:0">
-        <span class="sth-title">Leadership Capabilities</span>
-        ${ldTitle}
-      </div>
-      <div class="skill-table">${ldHTML}</div>
-    </div>`;
-}
-
-window.syncSlider=function(el){
-  const id=el.id; const isLd=id.startsWith('lk_');
-  const key=id.replace(/^(sk|lk)_/,'');
-  const valEl=document.getElementById((isLd?'lv_':'sv_')+key);
-  const v=parseInt(el.value);
-  if(valEl){valEl.textContent=v+'%';valEl.style.color=barColor(scoreStatus(v));}
-  const row=document.getElementById('row_'+key);
-  if(row){
-    row.classList.toggle('sk-weak',v<70&&!el.disabled);
-    const ci=row.querySelector('.sk-comment');
-    if(ci){ci.classList.toggle('req',v<70&&!el.disabled);ci.placeholder=v<70&&!el.disabled?'⚠ Reason required…':'Note (optional)…';}
-  }
-  // live overall update
-  const m=getMembers().find(x=>x.id===selectedMemberId); if(!m) return;
-  const {skills,leadership}=readSliders();
-  const score=calcOverall(skills,leadership,m.level);
-  const st=scoreStatus(score);
-  const od=document.getElementById('overall-live');
-  if(od){od.textContent=score+'%';od.style.color=barColor(st);}
-  const sl=document.getElementById('status-live');
-  if(sl) sl.textContent=statusLabel(st);
-  renderDevSection(selectedMemberId,skills,leadership);
-};
-
-function readSliders(){
-  const skills={},leadership={};
-  SKILLS.forEach(s=>{const e=document.getElementById('sk_'+s.key);if(e) skills[s.key]=parseInt(e.value);});
-  LEADERSHIP.forEach(l=>{const e=document.getElementById('lk_'+l.key);if(e) leadership[l.key]=parseInt(e.value);});
-  return {skills,leadership};
-}
-
-// ─────────────────────────────────────────────────
-//  DEV PLAN SECTION (dynamic — weak skills only)
-// ─────────────────────────────────────────────────
-function renderDevSection(memberId,skills,leadership){
-  const wrap=document.getElementById('dev-section'); if(!wrap) return;
-  const m=getMembers().find(x=>x.id===memberId); if(!m) return;
-  const lw=LEADERSHIP_WEIGHT[m.level]||0;
-  const last=m.history[m.history.length-1]||{devPlan:[]};
-  const existing=(last.devPlan||[]).reduce((acc,d)=>{acc[d.skillKey]=d.managerNote;return acc;},{});
-
-  const weak=[...SKILLS.map(s=>({...s,v:skills[s.key]||0})),
-              ...(lw>0?LEADERSHIP.map(l=>({...l,v:leadership[l.key]||0})):[])].filter(s=>s.v<70);
-
-  if(!weak.length){wrap.innerHTML='';return;}
-
-  const rows=weak.map(s=>`
-    <div class="dev-row">
-      <div class="dev-header">
-        <span class="dev-skill-name">${s.label}</span>
-        <span class="chip chip-dev">${s.v}%</span>
-      </div>
-      <div class="dev-suggestion">💡 ${SKILL_SOLUTIONS[s.key]?.[m.level]||'No suggestion available'}</div>
-      <input type="text" class="dev-input" id="dp_${s.key}"
-             placeholder="Add your specific instruction for this member…"
-             value="${(existing[s.key]||'').replace(/"/g,'&quot;')}">
-    </div>`).join('');
-
-  wrap.innerHTML=`
-    <div class="section-card">
-      <div class="skill-section-hd">
-        <span class="sth-title">Development Focus</span>
-        <span style="font-size:.72rem;color:var(--g400)">${weak.length} skill${weak.length>1?'s':''} below 70%</span>
-      </div>
-      ${rows}
-    </div>`;
-}
-
-// ─────────────────────────────────────────────────
-//  SAVE SNAPSHOT
-// ─────────────────────────────────────────────────
-window.saveSnapshot=function(id){
-  const members=getMembers();
-  const idx=members.findIndex(x=>x.id===id); if(idx<0) return;
-  const m=members[idx];
-  const {skills,leadership}=readSliders();
-  const lw=LEADERSHIP_WEIGHT[m.level]||0;
-
-  // Validate: weak skills need comment
-  const all=[...SKILLS,...(lw>0?LEADERSHIP:[])];
-  const vals={...skills,...(lw>0?leadership:{})};
-  const missing=all.filter(s=>{
-    if((vals[s.key]||0)>=70) return false;
-    const ci=document.getElementById('sc_'+s.key);
-    return !ci||!ci.value.trim();
-  });
-  if(missing.length){
-    toast('Add a reason for: '+missing.map(s=>s.label).join(', '),'err');
-    document.getElementById('sc_'+missing[0].key)?.focus();
-    return;
-  }
-
-  const skillComments={};
-  [...SKILLS,...LEADERSHIP].forEach(s=>{const ci=document.getElementById('sc_'+s.key);if(ci&&ci.value.trim()) skillComments[s.key]=ci.value.trim();});
-
-  const devPlan=[];
-  [...SKILLS,...LEADERSHIP].forEach(s=>{
-    const inp=document.getElementById('dp_'+s.key);
-    if(inp&&inp.value.trim()){
-      devPlan.push({id:'dp_'+Date.now()+'_'+s.key,skillKey:s.key,skillLabel:s.label,
-        suggestion:SKILL_SOLUTIONS[s.key]?.[m.level]||'',managerNote:inp.value.trim(),done:false,doneDate:null});
-    }
-  });
-
-  const note=document.getElementById('mgr-note')?.value||'';
-  const overall=calcOverall(skills,leadership,m.level);
-  m.history.push({date:new Date().toISOString().slice(0,10),skills,leadership,note,overall,skillComments,devPlan});
-  members[idx]=m; saveMembers(members);
-  if(trendChart) drawLineChart('trend-chart',m.history,m.level,chartPeriod);
-  renderSidebar();
-  toast('Snapshot saved · '+m.name+' · '+overall+'%','ok');
-};
-
-// ─────────────────────────────────────────────────
-//  MANAGER SHELL
-// ─────────────────────────────────────────────────
-let selectedMemberId=null;
-let chartPeriod='all';
-let mgrTab='team'; // 'team'|'queue'|'promo'|'settings'
-
-function renderManager(){
-  if(!sessionStorage.getItem('gjc_mgr_authed')){renderLoginGate('manager');return;}
-  const root=document.getElementById('view-manager');
-  root.innerHTML=`
-    <div class="mgr-shell">
-      <aside class="mgr-sidebar">
-        <div class="sidebar-hd">
-          <div>
-            <span class="sidebar-title">Team</span>
-            <span class="sidebar-count">${getMembers().length}</span>
-          </div>
-          <div style="display:flex;gap:4px">
-            <button class="icon-btn" onclick="showQueue()" title="Pending queue">
-              📋${getPending().length?`<span class="badge-count">${getPending().length}</span>`:''}
-            </button>
-            <button class="icon-btn" onclick="showSettings()" title="Settings">⚙</button>
-          </div>
-        </div>
-        <div class="sidebar-body" id="sidebar-list"></div>
-      </aside>
-      <div class="mgr-main" id="mgr-main"></div>
-    </div>`;
-  renderSidebar();
-  if(selectedMemberId) renderMemberDetail(selectedMemberId);
-  else renderOverview();
-}
-
-function renderSidebar(){
-  const members=getMembers();
-  const el=document.getElementById('sidebar-list'); if(!el) return;
-  el.innerHTML=members.map(m=>{
-    const last=m.history[m.history.length-1]||{};
-    const score=last.overall||0;
-    const st=scoreStatus(score);
-    const promo=isPromoCandidate(m);
-    return `
-      <div class="sb-member ${selectedMemberId===m.id?'active':''}" onclick="selectMember('${m.id}')">
-        <div class="sb-avatar" style="background:${LEVEL_COLORS[m.level]}">${initials(m.name)}</div>
-        <div class="sb-info">
-          <div class="sb-name">${m.name} ${promo?'🏆':''}</div>
-          <div class="sb-meta">
-            <span class="lv lv-${m.level}">${m.level}</span>
-            <span class="sb-score" style="color:${barColor(st)}">${score}%</span>
-          </div>
-          <div class="sb-bar"><div class="sb-bar-fill" style="width:${score}%;background:${barColor(st)}"></div></div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-window.selectMember=function(id){selectedMemberId=id;renderSidebar();renderMemberDetail(id);}
-
-// ── Overview (no member selected) ───────────────
-function renderOverview(){
-  const members=getMembers();
-  const scores=members.map(m=>(m.history[m.history.length-1]||{}).overall||0);
-  const avg=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-  const onTrack=members.filter(m=>scoreStatus((m.history[m.history.length-1]||{}).overall||0)!=='needs'&&scoreStatus((m.history[m.history.length-1]||{}).overall||0)!=='dev').length;
-  const needsAttn=members.filter(m=>scoreStatus((m.history[m.history.length-1]||{}).overall||0)==='needs').length;
-  const promoReady=members.filter(m=>isPromoCandidate(m)).length;
-
-  const rows=members.map(m=>{
-    const last=m.history[m.history.length-1]||{};
-    const score=last.overall||0;
-    const st=scoreStatus(score);
-    const gap=THRESHOLDS[m.level]?Math.max(0,THRESHOLDS[m.level]-score):null;
-    return `
-      <tr onclick="selectMember('${m.id}')">
-        <td><div style="font-weight:600">${m.name}${isPromoCandidate(m)?' 🏆':''}</div><div style="font-size:.72rem;color:var(--g400)">${last.date||'—'}</div></td>
-        <td><span class="lv lv-${m.level}">${m.level}</span></td>
+      <tr data-id="${m.id}" onclick="selectMember('${m.id}')" ${selectedMemberId===m.id?'class="selected-row"':''}>
         <td>
-          <div class="score-bar-cell">
-            <div class="tbl-bar"><div class="tbl-bar-fill" style="width:${score}%;background:${barColor(st)}"></div></div>
-            <span class="tbl-score" style="color:${barColor(st)}">${score}%</span>
+          <div class="member-cell">
+            <div class="member-avatar-sm" style="background:${m.color}">${initials(m.name)}</div>
+            <div>
+              <div class="member-cell-name">${m.name}</div>
+              <div class="member-cell-level">${LEVEL_NAMES[m.level]}</div>
+            </div>
           </div>
         </td>
-        <td><span class="${chipClass(st)}">${statusLabel(st)}</span></td>
-        <td style="font-size:.78rem;color:${gap?'var(--amber-d)':'var(--green-d)'}">${gap?'+'+gap+'pts needed':'Ready'}</td>
+        <td><span class="lvl-badge">${m.level}</span></td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" style="width:${score}%;background:${col}"></div>
+            </div>
+            <div class="score-num" style="color:${col}">${score}%</div>
+          </div>
+        </td>
+        <td>
+          <span class="status-chip ${statusClass(score)}">
+            <span class="dot"></span>${statusLabel(score)}
+          </span>
+          ${isPromo ? '<span class="promo-flag" style="margin-left:6px">🏆 Promo Ready</span>' : ''}
+        </td>
+        <td>${latest.date ? fmtDate(latest.date) : '—'}</td>
+        <td style="text-align:center">${m.history.length}</td>
       </tr>`;
   }).join('');
 
-  document.getElementById('mgr-main').innerHTML=`
-    <div class="overview-wrap">
-      <div class="kpi-strip">
-        <div class="kpi-card"><div class="kpi-label">Team Avg Score</div><div class="kpi-value" style="color:${barColor(scoreStatus(avg))}">${avg}%</div><div class="kpi-sub">${statusLabel(scoreStatus(avg))}</div></div>
-        <div class="kpi-card"><div class="kpi-label">On Track +</div><div class="kpi-value" style="color:var(--green)">${onTrack}</div><div class="kpi-sub">of ${members.length} members</div></div>
-        <div class="kpi-card"><div class="kpi-label">Needs Attention</div><div class="kpi-value" style="color:var(--red)">${needsAttn}</div><div class="kpi-sub">below 45% on any skill</div></div>
-        <div class="kpi-card"><div class="kpi-label">Promo Ready</div><div class="kpi-value" style="color:var(--purple)">${promoReady}</div><div class="kpi-sub">3+ cycles above threshold</div></div>
+  document.getElementById('team-scoring-section').innerHTML = `
+    <div class="section-label">Team Scoring</div>
+    <div class="team-table-wrap">
+      <div class="team-table-hd">
+        <div class="chart-title">All Members · Click any row to deep-dive ↓</div>
       </div>
-      <div class="section-card">
-        <div class="section-hd"><span class="section-title">Team Overview</span><span style="font-size:.72rem;color:var(--g400)">Click any row to view details</span></div>
-        <table class="member-table">
-          <thead><tr><th>Member</th><th>Level</th><th>Score</th><th>Status</th><th>Gap to Promo</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <table class="team-table">
+        <thead>
+          <tr>
+            <th>Member</th><th>Level</th>
+            <th style="width:240px">Score</th>
+            <th>Status</th><th>Last Snapshot</th>
+            <th style="text-align:center">Snapshots</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>`;
 }
 
-// ── Member detail ────────────────────────────────
-function renderMemberDetail(id){
-  const members=getMembers();
-  const m=members.find(x=>x.id===id); if(!m) return;
-  const last=m.history[m.history.length-1]||{skills:{},leadership:{},note:'',skillComments:{},devPlan:[]};
-  const score=last.overall||0;
-  const st=scoreStatus(score);
-  const lw=LEADERSHIP_WEIGHT[m.level]||0;
-  const thresh=THRESHOLDS[m.level];
-  const gap=thresh?Math.max(0,thresh-score):0;
-  const nl=nextLevel(m.level);
-
-  const main=document.getElementById('mgr-main');
-  main.innerHTML=`
-    <div class="detail-wrap">
-      <!-- Detail header -->
-      <div class="detail-hd">
-        <button class="detail-hd-back" onclick="clearMember()">← Team</button>
-        <div class="sb-avatar" style="background:${LEVEL_COLORS[m.level]};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0">${initials(m.name)}</div>
-        <div>
-          <div class="detail-hd-name">${m.name}${isPromoCandidate(m)?' 🏆':''}</div>
-          <span class="lv lv-${m.level}">${m.level} · ${LEVEL_NAMES[m.level]}</span>
-        </div>
-        <div class="detail-hd-right">
-          <span class="last-updated">Last updated: ${last.date||'—'}</span>
-          <button class="save-snapshot-btn" onclick="saveSnapshot('${m.id}')">Save Snapshot</button>
-        </div>
-      </div>
-
-      <!-- Detail body -->
-      <div class="detail-body">
-
-        <!-- Journey map -->
-        <div class="section-card" style="padding:14px 16px 10px">
-          <div class="section-hd" style="padding:0 0 10px;border-bottom:1px solid var(--g100)">
-            <span class="section-title">Growth Journey</span>
-            ${nl?`<span style="font-size:.72rem;color:var(--g400)">Immediate next step: <strong>${nl} · ${LEVEL_NAMES[nl]}</strong></span>`:''}
-          </div>
-          ${buildJourneyMap(m)}
-        </div>
-
-        <!-- Score summary + chart -->
-        <div class="section-card">
-          <div class="section-hd">
-            <span class="section-title">Performance Trend</span>
-            <div class="period-tabs">
-              ${['w2','m1','m3','m6','y1','all'].map(p=>`<button class="period-tab ${chartPeriod===p?'active':''}" onclick="setPeriod('${p}','${m.id}')">${{w2:'2W',m1:'1M',m3:'3M',m6:'6M',y1:'1Y',all:'All'}[p]}</button>`).join('')}
-            </div>
-          </div>
-          <div class="score-summary" style="margin:12px 16px">
-            <div>
-              <div class="ss-big" id="overall-live" style="color:${barColor(st)}">${score}%</div>
-              <div class="ss-label" id="status-live">${statusLabel(st)}</div>
-            </div>
-            <div class="ss-divider"></div>
-            <div class="ss-stat"><div class="ss-stat-val">${thresh||'—'}%</div><div class="ss-stat-label">Threshold</div></div>
-            <div class="ss-stat"><div class="ss-stat-val" style="color:${gap?'var(--amber-d)':'var(--green-d)'}">${gap?'+'+gap+'pts':'Ready'}</div><div class="ss-stat-label">To next level</div></div>
-            <div class="ss-stat"><div class="ss-stat-val">${m.history.length}</div><div class="ss-stat-label">Snapshots</div></div>
-          </div>
-          <div class="chart-body"><canvas id="trend-chart"></canvas></div>
-        </div>
-
-        <!-- Skill rows -->
-        ${buildSkillRows(last.skills,last.leadership,m.level,last.skillComments)}
-
-        <!-- Dev section (dynamic) -->
-        <div id="dev-section"></div>
-
-        <!-- Manager note -->
-        <div class="section-card" style="padding:14px 16px">
-          <div class="section-hd" style="padding:0 0 10px;border-bottom:1px solid var(--g100)">
-            <span class="section-title">Manager Note</span>
-            <span style="font-size:.72rem;color:var(--g400)">Specific behaviour observed this period</span>
-          </div>
-          <textarea class="mgr-note-ta" id="mgr-note" style="margin-top:10px" placeholder="e.g. Priya independently ran the AM onboarding session this week without prompting — strong Developing Others signal.">${last.note||''}</textarea>
-        </div>
-
-        <button class="save-snapshot-btn" style="align-self:stretch;padding:11px" onclick="saveSnapshot('${m.id}')">Save Snapshot</button>
-
-      </div>
-    </div>`;
-
-  drawLineChart('trend-chart',m.history,m.level,chartPeriod);
-  const {skills,leadership}=readSliders();
-  renderDevSection(id,skills,leadership);
+function selectMember(id) {
+  selectedMemberId = id;
+  document.querySelectorAll('.team-table tbody tr').forEach(r =>
+    r.classList.toggle('selected-row', r.dataset.id === id)
+  );
+  renderDeepDive(id);
+  setTimeout(() => document.getElementById('deep-dive-section')?.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
 }
 
-window.setPeriod=function(p,id){
-  chartPeriod=p;
-  const m=getMembers().find(x=>x.id===id); if(!m) return;
-  drawLineChart('trend-chart',m.history,m.level,p);
-  // update active tab styling
-  document.querySelectorAll('.period-tab').forEach(b=>b.classList.toggle('active',b.textContent==={w2:'2W',m1:'1M',m3:'3M',m6:'6M',y1:'1Y',all:'All'}[p]));
-};
+/* ── DEEP-DIVE ──────────────────────────────────────────── */
+function renderDeepDive(id) {
+  const members = getMembers();
+  const m = members.find(x => x.id === id);
+  if (!m) return;
 
-window.clearMember=function(){selectedMemberId=null;renderSidebar();renderOverview();}
+  const latest  = m.history[m.history.length - 1] || { skills:{}, leadership:{}, note:'', comments:{} };
+  const prev    = m.history[m.history.length - 2] || null;
+  const overall = latest.overall ?? 0;
+  const w       = LEADERSHIP_WEIGHT[m.level];
+  const hasLdr  = w > 0;
 
-// ── Queue ─────────────────────────────────────────
-window.showQueue=function(){
-  mgrTab='queue';
-  const pending=getPending();
-  const main=document.getElementById('mgr-main');
-  if(!pending.length){main.innerHTML='<div class="overview-wrap"><div class="section-card"><div class="empty-state">✅ No pending items</div></div></div>';return;}
-  const items=pending.map(p=>`
-    <div class="queue-item">
-      <div class="qi-icon ${p.type==='achievement'?'qi-ach':'qi-fb'}">${p.type==='achievement'?'🏅':'💬'}</div>
-      <div class="qi-body">
-        <div class="qi-title">${p.type==='achievement'?`Achievement · ${p.category}`:`Peer Feedback · ${p.feedback_type}`}</div>
-        <div class="qi-meta">${p.type==='achievement'?'From: '+p.from:'From: '+p.from+' → '+p.target} · ${p.date}</div>
-        <div class="qi-text">${p.text}</div>
-        <div class="qi-actions">
-          <button class="btn-approve" onclick="approveItem('${p.id}')">✓ Approve</button>
-          <button class="btn-reject" onclick="rejectItem('${p.id}')">✕ Remove</button>
-        </div>
-      </div>
-    </div>`).join('');
-  main.innerHTML=`<div class="overview-wrap"><div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="detail-hd-back" onclick="renderOverview()">← Overview</button><span style="font-size:.9rem;font-weight:700">Pending Queue (${pending.length})</span></div><div style="display:flex;flex-direction:column;gap:10px">${items}</div></div>`;
-};
-window.approveItem=function(id){
-  let p=getPending(),a=getApproved();
-  const item=p.find(x=>x.id===id); if(!item) return;
-  item.approvedDate=new Date().toISOString().slice(0,10);
-  savePending(p.filter(x=>x.id!==id)); saveApproved([...a,item]);
-  toast('Approved ✓','ok'); showQueue();
-};
-window.rejectItem=function(id){savePending(getPending().filter(x=>x.id!==id));toast('Removed');showQueue();}
-
-// ── Settings ──────────────────────────────────────
-window.showSettings=function(){
-  const members=getMembers();
-  const rows=members.map(m=>`
-    <tr>
-      <td><strong>${m.name}</strong></td>
-      <td><span class="lv lv-${m.level}">${m.level}</span></td>
-      <td><div style="display:flex;gap:6px;align-items:center">
-        <input class="pin-reset-input" type="password" inputmode="numeric" maxlength="4" id="pin_${m.id}" placeholder="New PIN">
-        <button class="btn-approve" onclick="resetMemberPin('${m.id}')">Set</button>
-      </div></td>
-    </tr>`).join('');
-  const main=document.getElementById('mgr-main');
-  main.innerHTML=`
-    <div class="overview-wrap">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <button class="detail-hd-back" onclick="renderOverview()">← Overview</button>
-        <span style="font-size:.9rem;font-weight:700">Settings</span>
-      </div>
-      <div class="section-card" style="margin-bottom:16px">
-        <div class="section-hd"><span class="section-title">Member PINs</span><span style="font-size:.72rem;color:var(--g400)">Default PIN is 0000</span></div>
-        <div style="padding:8px 0">
-          <table class="promo-table"><thead><tr><th>Name</th><th>Level</th><th>Reset PIN</th></tr></thead><tbody>${rows}</tbody></table>
-        </div>
-      </div>
-      <div class="section-card">
-        <div class="section-hd"><span class="section-title">Manager PIN</span></div>
-        <div style="padding:14px 16px;display:flex;gap:8px;align-items:center">
-          <input class="pin-reset-input" type="password" inputmode="numeric" maxlength="4" id="pin_manager" placeholder="New PIN">
-          <button class="btn-approve" onclick="resetManagerPin()">Update</button>
-        </div>
-      </div>
-    </div>`;
-};
-window.resetMemberPin=function(id){
-  const v=document.getElementById('pin_'+id)?.value;
-  if(!v||v.length!==4){toast('PIN must be 4 digits','err');return;}
-  const a=getAuth(); if(!a.members) a.members={};
-  a.members[id]={pin:v}; saveAuth(a); toast('PIN updated ✓','ok');
-};
-window.resetManagerPin=function(){
-  const v=document.getElementById('pin_manager')?.value;
-  if(!v||v.length!==4){toast('PIN must be 4 digits','err');return;}
-  const a=getAuth(); a.manager={pin:v}; saveAuth(a); toast('Manager PIN updated ✓','ok');
-};
-
-// ─────────────────────────────────────────────────
-//  PIN GATE
-// ─────────────────────────────────────────────────
-function renderLoginGate(role,memberId){
-  const isManager=role==='manager';
-  const name=memberId?getMemberName(memberId):'';
-  const root=document.getElementById('view-'+role.split('-')[0]);
-  root.innerHTML=`
-    <div class="pin-gate">
-      <div class="pin-card">
-        <div class="pin-icon">${isManager?'👔':'🔒'}</div>
-        <h2>${isManager?'Manager Login':name}</h2>
-        <p class="pin-hint">Enter your 4-digit PIN</p>
-        <input class="pin-input" id="pin-entry" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autofocus>
-        <button class="pin-btn" onclick="checkPin('${role}','${memberId||''}')">Enter</button>
-        ${!isManager?`<button style="background:none;border:none;color:var(--g400);font-size:.78rem;margin-top:10px;cursor:pointer" onclick="renderMember()">← Back</button>`:''}
-        <div class="pin-error" id="pin-error"></div>
-      </div>
-    </div>`;
-  document.getElementById('pin-entry')?.addEventListener('keydown',e=>{if(e.key==='Enter') checkPin(role,memberId||'');});
-}
-
-function getMemberName(id){return getMembers().find(x=>x.id===id)?.name||'';}
-
-window.checkPin=function(role,memberId){
-  const val=document.getElementById('pin-entry')?.value||'';
-  const auth=getAuth();
-  const correct=role==='manager'?auth.manager?.pin||'1234':auth.members?.[memberId]?.pin||'0000';
-  if(val===correct){
-    if(role==='manager'){sessionStorage.setItem('gjc_mgr_authed','1');renderManager();}
-    else{sessionStorage.setItem('gjc_mbr_authed',memberId);loggedInMember=getMembers().find(m=>m.id===memberId);renderMemberDashboard();}
-  } else {
-    const err=document.getElementById('pin-error'); if(err) err.textContent='Incorrect PIN — try again';
-    const inp=document.getElementById('pin-entry');
-    inp?.classList.add('shake'); inp&&(inp.value='');
-    setTimeout(()=>inp?.classList.remove('shake'),500);
-  }
-};
-
-// ─────────────────────────────────────────────────
-//  MEMBER VIEW
-// ─────────────────────────────────────────────────
-let loggedInMember=null;
-
-function renderMember(){
-  const root=document.getElementById('view-member');
-  const authedId=sessionStorage.getItem('gjc_mbr_authed');
-  if(authedId&&!loggedInMember) loggedInMember=getMembers().find(m=>m.id===authedId);
-  if(loggedInMember){renderMemberDashboard();return;}
-
-  const opts=getMembers().map(m=>`<option value="${m.id}">${m.name} (${m.level})</option>`).join('');
-  root.innerHTML=`
-    <div class="member-login">
-      <div class="pin-card" style="width:340px">
-        <div class="pin-icon">🧑‍💼</div>
-        <h2>Your Growth Journey</h2>
-        <p class="pin-hint">Select your name to continue</p>
-        <select style="width:100%;border:1.5px solid var(--g200);border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:.88rem" id="member-select">
-          <option value="">— Select your name —</option>${opts}
-        </select>
-        <button class="pin-btn" onclick="memberSelectStep()">Continue →</button>
-      </div>
-    </div>`;
-}
-
-window.memberSelectStep=function(){
-  const id=document.getElementById('member-select')?.value;
-  if(!id){toast('Please select your name','err');return;}
-  renderLoginGate('member',id);
-};
-
-function renderMemberDashboard(){
-  const m=loggedInMember; if(!m) return;
-  const last=m.history[m.history.length-1]||{skills:{},leadership:{},skillComments:{},devPlan:[]};
-  const score=last.overall||0;
-  const st=scoreStatus(score);
-  const tgt=targetLevel(m.level);
-  const nl=nextLevel(m.level);
-  const thresh=THRESHOLDS[m.level];
-  const approved=getApproved();
-  const myAch=approved.filter(a=>a.type==='achievement'&&a.from===m.name);
-  const myFb=approved.filter(a=>a.type==='feedback'&&a.target===m.name);
-
-  const skillRows=SKILLS.map(s=>{
-    const v=last.skills[s.key]||0;
-    const comment=last.skillComments?.[s.key]||'';
+  const skillCards = SKILLS.map((sk, idx) => {
+    const val     = latest.skills[sk.key] ?? 50;
+    const comment = latest.comments?.[sk.key] ?? '';
+    const [col, bg] = skColor(val);
+    const ctx  = SKILL_CONTEXT[sk.key]?.[m.level] ?? '';
+    const hint = SKILL_SOLUTIONS[sk.key]?.[m.level] ?? '';
+    const slBg = `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)`;
     return `
-      <div class="member-skill-row">
-        <span class="msr-name">${s.label}</span>
-        <div class="msr-bar-wrap"><div class="msr-bar" style="width:${v}%;background:${barColor(scoreStatus(v))}"></div></div>
-        <span class="msr-val" style="color:${barColor(scoreStatus(v))}">${v}%</span>
-        ${comment?`<span class="msr-comment">${comment}</span>`:''}
+      <div class="skill-card" id="sc-${sk.key}"
+           style="--sk-color:${col};--sk-bg:${bg};--slider-bg:${slBg}">
+        <div class="skill-card-top">
+          <div class="skill-card-name">${sk.label}</div>
+          <div class="skill-score-badge" id="badge-${sk.key}">${val}%</div>
+        </div>
+        <div class="skill-context">${ctx}</div>
+        <div class="skill-slider-wrap">
+          <input type="range" class="skill-slider" min="0" max="100" value="${val}"
+            data-key="${sk.key}" data-idx="${idx}" data-type="skill"
+            oninput="syncSlider(this,'${id}')"
+            style="--sk-color:${col};--slider-bg:${slBg}">
+        </div>
+        <button class="comment-toggle-btn" onclick="toggleComment('cbox-${sk.key}',this)">
+          <span class="toggle-icon">${comment ? '✏️' : '💬'}</span>
+          <span>${comment ? 'Edit Comment' : 'Add Comment'}</span>
+        </button>
+        <div class="comment-box${comment ? ' open' : ''}" id="cbox-${sk.key}">
+          <textarea data-key="${sk.key}" data-type="comment"
+            placeholder="${hint}">${comment}</textarea>
+          <div class="comment-hint">Suggested action: ${hint}</div>
+        </div>
       </div>`;
   }).join('');
 
-  const allDev=m.history.flatMap((c,ci)=>(c.devPlan||[]).map(d=>({...d,cycleIdx:ci})));
-  const activeDev=allDev.filter(d=>!d.done);
-  const devRows=activeDev.length?activeDev.map(d=>`
-    <div class="dp-member-row">
-      <div class="dp-m-skill">${d.skillLabel}</div>
-      ${d.suggestion?`<div class="dp-m-sugg">💡 ${d.suggestion}</div>`:''}
-      <div class="dp-m-note">📌 ${d.managerNote}</div>
-      <button class="btn-done" onclick="markDone('${m.id}',${d.cycleIdx},'${d.id}')">Mark as Done ✓</button>
-    </div>`)
-    .join(''):'<div style="font-size:.8rem;color:var(--g400);padding:8px 0">No active items — great work!</div>';
+  const ldrCards = LEADERSHIP.map(lk => {
+    const val     = latest.leadership?.[lk.key] ?? 0;
+    const comment = latest.comments?.['ldr_' + lk.key] ?? '';
+    const [col, bg] = skColor(val || 50);
+    const ctx  = LEADERSHIP_CONTEXT[lk.key]?.[m.level] ?? 'N/A';
+    const hint = LEADERSHIP_SOLUTIONS[lk.key]?.[m.level] ?? '';
+    const slBg = hasLdr ? `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)` : '#E2E8F0';
+    return `
+      <div class="skill-card${hasLdr ? '' : ' disabled'}" id="sc-ldr-${lk.key}"
+           style="--sk-color:${col};--sk-bg:${bg};--slider-bg:${slBg}">
+        <div class="skill-card-top">
+          <div class="skill-card-name">${lk.label}</div>
+          <div class="skill-score-badge" id="badge-ldr-${lk.key}">${hasLdr ? val + '%' : 'N/A'}</div>
+        </div>
+        <div class="skill-context">${ctx}</div>
+        ${hasLdr ? `
+        <div class="skill-slider-wrap">
+          <input type="range" class="skill-slider" min="0" max="100" value="${val}"
+            data-key="${lk.key}" data-idx="0" data-type="leadership"
+            oninput="syncSlider(this,'${id}')"
+            style="--sk-color:${col};--slider-bg:${slBg}">
+        </div>
+        <button class="comment-toggle-btn" onclick="toggleComment('cbox-ldr-${lk.key}',this)">
+          <span class="toggle-icon">${comment ? '✏️' : '💬'}</span>
+          <span>${comment ? 'Edit Comment' : 'Add Comment'}</span>
+        </button>
+        <div class="comment-box${comment ? ' open' : ''}" id="cbox-ldr-${lk.key}">
+          <textarea data-key="ldr_${lk.key}" data-type="comment"
+            placeholder="${hint}">${comment}</textarea>
+          <div class="comment-hint">Suggested action: ${hint}</div>
+        </div>` : ''}
+      </div>`;
+  }).join('');
 
-  const achItems=myAch.length?myAch.map(a=>`
-    <div class="approved-item">
-      <div class="ai-hd"><span class="cat-badge">${a.category}</span></div>
-      <div class="ai-text">${a.text}</div><div class="ai-from">${a.date}</div>
-    </div>`).join('')
-  :'<div style="font-size:.8rem;color:var(--g400);padding:8px 0">Log your first achievement below!</div>';
+  // dev plan
+  const weakSkills = SKILLS.filter(sk => (latest.skills[sk.key] ?? 50) < 65);
+  const devPlan = weakSkills.length ? `
+    <div class="devplan-card">
+      <div class="devplan-title">📋 Development Focus Areas</div>
+      ${weakSkills.map(sk => `
+        <div class="devplan-item">
+          <strong>${sk.label}</strong>
+          <span>${SKILL_SOLUTIONS[sk.key]?.[m.level] ?? ''}</span>
+        </div>`).join('')}
+    </div>` : '';
 
-  const fbItems=myFb.length?myFb.map(f=>`
-    <div class="approved-item">
-      <div class="ai-hd"><span class="cat-badge ${f.feedback_type==='Positive'?'fb-pos':'fb-con'}">${f.feedback_type}</span><span style="font-size:.7rem;color:var(--g400);margin-left:4px">from ${f.from}</span></div>
-      <div class="ai-text">${f.text}</div><div class="ai-from">${f.date}</div>
-    </div>`).join('')
-  :'<div style="font-size:.8rem;color:var(--g400);padding:8px 0">No approved feedback yet.</div>';
+  const radarCurrent = SKILLS.map(sk => latest.skills[sk.key] ?? 50);
+  const radarPrev    = prev ? SKILLS.map(sk => prev.skills[sk.key] ?? 50) : null;
 
-  const root=document.getElementById('view-member');
-  root.style.overflowY='auto';
-  root.innerHTML=`
-    <div class="member-view">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-        <button class="detail-hd-back" onclick="memberLogout()">← Switch</button>
-        <div class="sb-avatar" style="background:${LEVEL_COLORS[m.level]};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff">${initials(m.name)}</div>
+  document.getElementById('deep-dive-section').innerHTML = `
+    <div class="section-label">Individual Deep-Dive</div>
+    <div class="deep-dive">
+      <!-- Header -->
+      <div class="deep-dive-hd">
+        <div class="dive-member">
+          <div class="dive-avatar" style="background:${m.color}">${initials(m.name)}</div>
+          <div>
+            <div class="dive-name">${m.name}</div>
+            <div class="dive-meta">${LEVEL_NAMES[m.level]} · ${m.level} · ${m.history.length} snapshot${m.history.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="dive-overall">
+          <div class="dive-score" id="dive-score">${overall}%</div>
+          <div class="dive-score-label" id="dive-score-lbl">${statusLabel(overall)}</div>
+        </div>
+      </div>
+
+      <div class="deep-dive-body">
+        <!-- Journey -->
         <div>
-          <div style="font-size:1rem;font-weight:800">${m.name}</div>
-          <span class="lv lv-${m.level}">${m.level} · ${LEVEL_NAMES[m.level]}</span>
+          <div class="section-label" style="margin-bottom:10px">Growth Journey</div>
+          ${buildJourneyMap(m)}
         </div>
-      </div>
 
-      <!-- Journey map -->
-      <div class="card" style="margin-bottom:14px;padding:12px 14px">
-        ${buildJourneyMap(m)}
-      </div>
+        <!-- Radar + skills -->
+        <div class="dive-grid">
+          <div class="radar-card">
+            <div class="radar-card-title">Skills Web</div>
+            <div class="radar-wrap"><canvas id="radarChart"></canvas></div>
+            <div class="radar-legend">
+              <div class="radar-legend-item"><div class="radar-legend-dot" style="background:#6366F1"></div>Current</div>
+              ${radarPrev ? '<div class="radar-legend-item"><div class="radar-legend-dot" style="background:#CBD5E1"></div>Previous</div>' : ''}
+            </div>
+          </div>
 
-      <!-- Score + growth arrow -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div class="card" style="text-align:center;padding:18px">
-          <div style="font-size:2.5rem;font-weight:900;color:${barColor(st)}">${score}%</div>
-          <div style="font-size:.8rem;color:var(--g400);margin-top:3px">${statusLabel(st)}</div>
-          <div style="font-size:.7rem;color:var(--g400);margin-top:2px">Threshold: ${thresh?thresh+'%':'Exec review'}${isPromoCandidate(m)?' · 🏆 Promo ready':''}</div>
+          <div class="skills-section">
+            <div class="skill-section-label">Core Skills</div>
+            <div class="skill-cards-grid">${skillCards}</div>
+
+            <div class="ldr-banner">
+              🎯 <strong>Leadership Weight: ${Math.round(w * 100)}%</strong> of overall score
+              ${!hasLdr ? '— unlocks from Senior Associate (SA) onwards' : ''}
+            </div>
+
+            ${hasLdr ? `
+            <div class="skill-section-label">Leadership Competencies</div>
+            <div class="skill-cards-grid">${ldrCards}</div>` : ''}
+          </div>
         </div>
-        <div class="card grow-arrow-card">
-          <div class="ga-lv"><div class="ga-code" style="color:var(--purple)">${m.level}</div><div class="ga-name">${LEVEL_NAMES[m.level]}</div></div>
-          <div class="ga-arrow">→</div>
-          ${nl&&nl!==tgt?`<div class="ga-lv"><div class="ga-code" style="color:var(--amber)">${nl}</div><div class="ga-name">${LEVEL_NAMES[nl]}</div></div><div class="ga-arrow">→</div>`:''}
-          <div class="ga-lv"><div class="ga-code" style="color:var(--green)">${tgt}</div><div class="ga-name">${LEVEL_NAMES[tgt]}</div></div>
-        </div>
-      </div>
 
-      <!-- Radar + trend -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div class="card"><div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Skill Radar</div><div class="radar-wrap"><canvas id="member-radar"></canvas></div></div>
-        <div class="card"><div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Score Journey</div><div class="chart-wrap"><canvas id="member-trend"></canvas></div></div>
-      </div>
+        ${devPlan}
 
-      <!-- Skill scores -->
-      <div class="card" style="margin-bottom:14px">
-        <div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Skill Scores & Manager Comments</div>
-        ${skillRows}
-      </div>
-
-      <!-- Dev plan -->
-      <div class="card" style="margin-bottom:14px">
-        <div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Development Plan <span style="font-weight:400;color:var(--g400)">(${activeDev.length} active)</span></div>
-        ${devRows}
-      </div>
-
-      <!-- Achievements + feedback -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div class="card"><div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Achievements</div>${achItems}</div>
-        <div class="card"><div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Peer Feedback</div>${fbItems}</div>
-      </div>
-
-      <!-- Log achievement -->
-      <div class="card">
-        <div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Log an Achievement</div>
-        <div class="achieve-form">
-          <select id="ach-cat"><option value="">— Select category —</option>${ACHIEVEMENT_CATS.map(c=>`<option>${c}</option>`).join('')}</select>
-          <textarea id="ach-text" rows="3" placeholder="Describe the specific achievement, outcome, or initiative…"></textarea>
-          <button class="submit-btn" onclick="submitAchievement()">Submit for Manager Review</button>
+        <!-- Manager note & save -->
+        <div class="save-row">
+          <label>Manager Note (saved with snapshot)</label>
+          <textarea id="mgr-note" placeholder="Coaching notes, context, next steps…">${latest.note || ''}</textarea>
+          <div class="save-actions">
+            <button class="btn-ghost" onclick="document.getElementById('deep-dive-section').innerHTML=''">Close</button>
+            <button class="btn-primary" onclick="saveSnapshot('${id}')">💾 Save Snapshot</button>
+          </div>
         </div>
       </div>
     </div>`;
 
-  drawRadar('member-radar',last.skills);
-  drawLineChart('member-trend',m.history,m.level,'all');
+  drawRadar(radarCurrent, radarPrev);
 }
 
-window.memberLogout=function(){loggedInMember=null;sessionStorage.removeItem('gjc_mbr_authed');renderMember();}
-
-window.markDone=function(memberId,cycleIdx,devId){
-  const members=getMembers();
-  const m=members.find(x=>x.id===memberId); if(!m) return;
-  const item=m.history[cycleIdx]?.devPlan?.find(d=>d.id===devId); if(!item) return;
-  item.done=true; item.doneDate=new Date().toISOString().slice(0,10);
-  saveMembers(members); loggedInMember=m; toast('Marked done ✓','ok'); renderMemberDashboard();
-};
-
-window.submitAchievement=function(){
-  const cat=document.getElementById('ach-cat')?.value;
-  const text=document.getElementById('ach-text')?.value.trim();
-  if(!cat){toast('Select a category','err');return;}
-  if(!text||text.length<15){toast('Please describe the achievement in more detail','err');return;}
-  const p=getPending();
-  p.push({id:'p_'+Date.now(),type:'achievement',from:loggedInMember.name,target:loggedInMember.name,category:cat,text,date:new Date().toISOString().slice(0,10)});
-  savePending(p); toast('Submitted for manager review ✓','ok');
-  document.getElementById('ach-cat').value=''; document.getElementById('ach-text').value='';
-};
-
-// ─────────────────────────────────────────────────
-//  PEER VIEW
-// ─────────────────────────────────────────────────
-function renderPeer(){
-  const opts=getMembers().map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
-  document.getElementById('view-peer').innerHTML=`
-    <div class="peer-form-wrap">
-      <div style="font-size:.95rem;font-weight:800;margin-bottom:4px">Submit Peer Feedback</div>
-      <div style="font-size:.8rem;color:var(--g400);margin-bottom:14px">Goes to manager for review before the recipient sees it.</div>
-      <div class="notice-box">ℹ️ You cannot view scores or other profiles. Reference a specific observable behaviour — no generalities or comparisons.</div>
-      <div class="peer-form" style="margin-top:14px">
-        <div><label>Your name</label><select id="peer-from"><option value="">— Your name —</option>${opts}</select></div>
-        <div><label>Feedback for</label><select id="peer-target"><option value="">— Colleague —</option>${opts}</select></div>
-        <div><label>Type</label><select id="peer-type"><option value="Positive">Positive — recognise a specific action or result</option><option value="Constructive">Constructive — highlight a development area with example</option></select></div>
-        <div><label>Your feedback <span style="font-weight:400;color:var(--g400)">(specific event required, min 30 chars)</span></label><textarea id="peer-text" rows="4" placeholder="e.g. Priya independently ran the AM onboarding session this week without prompting…"></textarea></div>
-        <button class="peer-submit" onclick="submitPeer()">Submit Feedback</button>
-        <div class="success-msg" id="peer-success">Submitted! Manager will review before it's visible. 🎉</div>
-      </div>
-    </div>`;
-}
-window.submitPeer=function(){
-  const from=document.getElementById('peer-from')?.value;
-  const target=document.getElementById('peer-target')?.value;
-  const type=document.getElementById('peer-type')?.value;
-  const text=document.getElementById('peer-text')?.value.trim();
-  if(!from){toast('Select your name','err');return;}
-  if(!target){toast('Select a colleague','err');return;}
-  if(from===target){toast('Cannot submit feedback about yourself','err');return;}
-  if(!text||text.length<30){toast('Write a specific observation (min 30 chars)','err');return;}
-  const p=getPending();
-  p.push({id:'p_'+Date.now(),type:'feedback',feedback_type:type,from,target,text,date:new Date().toISOString().slice(0,10)});
-  savePending(p);
-  document.getElementById('peer-text').value=''; document.getElementById('peer-from').value='';
-  const s=document.getElementById('peer-success');s.style.display='block';setTimeout(()=>s.style.display='none',4000);
-};
-
-// ─────────────────────────────────────────────────
-//  WORKFLOW
-// ─────────────────────────────────────────────────
-function renderWorkflow(){
-  document.getElementById('view-workflow').innerHTML=`
-    <div style="padding:20px;overflow-y:auto;height:100%">
-      <div class="card" style="padding:14px">
-        <div style="font-size:.72rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">End-to-End Workflow — 5 Swim Lanes</div>
-        <img src="workflow.svg" alt="Workflow" style="width:100%;border-radius:6px;border:1px solid var(--g200)">
-      </div>
-    </div>`;
+/* ── JOURNEY MAP ────────────────────────────────────────── */
+function buildJourneyMap(member) {
+  const idx = LEVELS.indexOf(member.level);
+  return `<div class="jmap">` + LEVELS.map((lv, i) => {
+    let cls = '';
+    if (i < idx) cls = 'done';
+    else if (i === idx) cls = 'current';
+    else if (i === idx + 1) cls = 'next-step';
+    else if (i === idx + 2) cls = 'goal';
+    const tag = i === idx ? '<br><span style="font-size:9px;color:#6366F1;font-weight:700">YOU</span>' :
+                i === idx+1 ? '<br><span style="font-size:9px;color:#F59E0B;font-weight:700">NEXT</span>' :
+                i === idx+2 ? '<br><span style="font-size:9px;color:#10B981;font-weight:700">GOAL</span>' : '';
+    return `
+      ${i > 0 ? `<div class="jm-connector${i <= idx ? ' done' : ''}"></div>` : ''}
+      <div class="jm-node ${cls}">
+        <div class="jm-circle">${lv}</div>
+        <div class="jm-label">${lv}${tag}</div>
+      </div>`;
+  }).join('') + `</div>`;
 }
 
-// ─────────────────────────────────────────────────
-//  ROLE SWITCHING
-// ─────────────────────────────────────────────────
-let activeRole='manager';
-window.setRole=function(role){
-  activeRole=role;
-  ['manager','member','peer','workflow'].forEach(v=>{
-    document.getElementById('view-'+v).style.display=v===role?'flex':'none';
-    document.getElementById('tab-'+v)?.classList.toggle('active',v===role);
+/* ── SLIDER SYNC ────────────────────────────────────────── */
+function syncSlider(el, memberId) {
+  const val  = parseInt(el.value);
+  const key  = el.dataset.key;
+  const type = el.dataset.type;
+  const [col, bg] = skColor(val);
+  const slBg = `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)`;
+
+  el.style.setProperty('--slider-bg', slBg);
+  el.style.setProperty('--sk-color', col);
+
+  const badgeId = type === 'leadership' ? `badge-ldr-${key}` : `badge-${key}`;
+  const badge = document.getElementById(badgeId);
+  if (badge) { badge.textContent = val + '%'; badge.style.background = bg; badge.style.color = col; }
+
+  const cardId = type === 'leadership' ? `sc-ldr-${key}` : `sc-${key}`;
+  const card = document.getElementById(cardId);
+  if (card) { card.style.setProperty('--sk-color', col); card.style.borderLeftColor = col; }
+
+  // live radar update (skills only)
+  if (radarChartInst && type === 'skill') {
+    const idx = SKILLS.findIndex(s => s.key === key);
+    if (idx >= 0) { radarChartInst.data.datasets[0].data[idx] = val; radarChartInst.update('none'); }
+  }
+
+  recomputeOverall(memberId);
+}
+
+function recomputeOverall(memberId) {
+  const members = getMembers();
+  const m = members.find(x => x.id === memberId);
+  if (!m) return;
+  const skills = {};
+  SKILLS.forEach(sk => {
+    const el = document.querySelector(`input[data-key="${sk.key}"][data-type="skill"]`);
+    skills[sk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.skills[sk.key] ?? 50);
   });
-  // set flex direction for manager (it has its own shell)
-  if(role==='manager') document.getElementById('view-manager').style.flexDirection='column';
-  if(role==='manager')  renderManager();
-  if(role==='member')   renderMember();
-  if(role==='peer')     renderPeer();
-  if(role==='workflow') renderWorkflow();
-};
+  const leadership = {};
+  LEADERSHIP.forEach(lk => {
+    const el = document.querySelector(`input[data-key="${lk.key}"][data-type="leadership"]`);
+    leadership[lk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.leadership[lk.key] ?? 0);
+  });
+  const o = calcOverall(skills, leadership, m.level);
+  const scoreEl = document.getElementById('dive-score');
+  const lblEl   = document.getElementById('dive-score-lbl');
+  if (scoreEl) scoreEl.textContent = o + '%';
+  if (lblEl)   lblEl.textContent   = statusLabel(o);
+}
 
-// ─────────────────────────────────────────────────
-//  BOOT
-// ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
-  seedIfEmpty();
-  setRole('manager');
-});
+/* ── TOGGLE COMMENT BOX ─────────────────────────────────── */
+function toggleComment(boxId, btn) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  const open = box.classList.toggle('open');
+  const icon = btn.querySelector('.toggle-icon');
+  const lbl  = btn.querySelector('span:last-child');
+  if (icon) icon.textContent = open ? '✏️' : '💬';
+  if (lbl)  lbl.textContent  = open ? 'Hide Comment' : (lbl.textContent.includes('Edit') ? 'Edit Comment' : 'Add Comment');
+}
+
+/* ── SAVE SNAPSHOT ──────────────────────────────────────── */
+function saveSnapshot(id) {
+  const members = getMembers();
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+
+  const skills = {};
+  SKILLS.forEach(sk => {
+    const el = document.querySelector(`input[data-key="${sk.key}"][data-type="skill"]`);
+    skills[sk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.skills[sk.key] ?? 50);
+  });
+  const leadership = {};
+  LEADERSHIP.forEach(lk => {
+    const el = document.querySelector(`input[data-key="${lk.key}"][data-type="leadership"]`);
+    leadership[lk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.leadership[lk.key] ?? 0);
+  });
+
+  // Collect comments
+  const comments = {};
+  document.querySelectorAll('.comment-box textarea').forEach(ta => {
+    if (ta.dataset.key) comments[ta.dataset.key] = ta.value.trim();
+  });
+
+  // Validate: weak skills (< 45) must have comment
+  const weakNoComment = SKILLS.filter(sk => (skills[sk.key] ?? 50) < 45 && !comments[sk.key]);
+  if (weakNoComment.length) {
+    toast(`⚠ Add a comment for: ${weakNoComment.map(s => s.label).join(', ')}`);
+    weakNoComment.forEach(sk => document.getElementById(`cbox-${sk.key}`)?.classList.add('open'));
+    return;
+  }
+
+  const note    = document.getElementById('mgr-note')?.value?.trim() ?? '';
+  const overall = calcOverall(skills, leadership, m.level);
+  m.history.push({ date: new Date().toISOString(), skills, leadership, note, comments, overall });
+  saveMembers(members);
+  toast('✅ Snapshot saved!');
+
+  const updatedMembers = getMembers();
+  buildKPISection(updatedMembers);
+  buildTeamChartSection(updatedMembers);
+  buildTeamScoringSection(updatedMembers);
+  renderDeepDive(id);
+}
+
+/* ── RADAR ──────────────────────────────────────────────── */
+function drawRadar(current, prev) {
+  if (radarChartInst) { radarChartInst.destroy(); radarChartInst = null; }
+  const ctx = document.getElementById('radarChart')?.getContext('2d');
+  if (!ctx) return;
+  const datasets = [{
+    label: 'Current', data: current,
+    backgroundColor: 'rgba(99,102,241,.15)',
+    borderColor: '#6366F1', borderWidth: 2,
+    pointBackgroundColor: '#6366F1', pointRadius: 4,
+  }];
+  if (prev) {
+    datasets.push({
+      label: 'Previous', data: prev,
+      backgroundColor: 'rgba(203,213,225,.08)',
+      borderColor: '#CBD5E1', borderWidth: 1.5,
+      pointBackgroundColor: '#CBD5E1', pointRadius: 3,
+      borderDash: [4, 3],
+    });
+  }
+  radarChartInst = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: SKILLS.map(s => s.label.split(' ')[0]), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { stepSize: 25, font:{size:10}, backdropColor:'transparent', color:'#94A3B8' },
+          grid: { color:'#E2E8F0' },
+          angleLines: { color:'#E2E8F0' },
+          pointLabels: { font:{size:10}, color:'#475569' },
+        },
+      },
+    },
+  });
+}
+
+/* ── PENDING SECTION ────────────────────────────────────── */
+function buildPendingSection() {
+  const pending = getPending();
+  const members = getMembers();
+  const nameMap = Object.fromEntries(members.map(m => [m.id, m.name]));
+
+  const items = pending.length ? pending.map(p => `
+    <div class="pending-item">
+      <div class="pending-type-icon">${p.type === 'achievement' ? '🏅' : '💬'}</div>
+      <div class="pending-content">
+        <div class="pending-who">${nameMap[p.target] || p.target} · ${p.type === 'achievement' ? p.category : 'Peer Feedback from ' + (nameMap[p.from] || p.from)}</div>
+        <div class="pending-text">${p.text}</div>
+        <div class="pending-meta">${fmtDate(p.date)}</div>
+      </div>
+      <div class="pending-actions">
+        <button class="btn-approve" onclick="approveItem('${p.id}')">Approve</button>
+        <button class="btn-remove"  onclick="removeItem('${p.id}')">Remove</button>
+      </div>
+    </div>`).join('') : `<div class="empty-state"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>`;
+
+  document.getElementById('pending-section').innerHTML = `
+    <div class="section-label">Pending Approvals</div>
+    <div class="pending-section">
+      <div class="pending-hd">
+        <div class="pending-hd-title">Approval Queue</div>
+        ${pending.length ? `<span class="badge-count">${pending.length}</span>` : ''}
+      </div>
+      <div class="pending-list">${items}</div>
+    </div>`;
+}
+
+function approveItem(pid) {
+  let pending = getPending();
+  const item = pending.find(p => p.id === pid);
+  if (!item) return;
+  savePending(pending.filter(p => p.id !== pid));
+  const approved = getApproved();
+  approved.push({ ...item, approvedDate: new Date().toISOString() });
+  saveApproved(approved);
+  buildPendingSection();
+  toast('✅ Approved!');
+}
+function removeItem(pid) {
+  savePending(getPending().filter(p => p.id !== pid));
+  buildPendingSection();
+  toast('🗑 Removed');
+}
+
+/* ── MANAGER PIN ────────────────────────────────────────── */
+function renderManagerPin(el) {
+  el.innerHTML = `
+    <div class="pin-overlay">
+      <div class="pin-card">
+        <div class="pin-icon">🔐</div>
+        <h2>Manager Access</h2>
+        <p>Enter your 4-digit PIN to continue</p>
+        <div class="pin-dots" id="mgr-dots">
+          ${[0,1,2,3].map(() => '<div class="pin-dot"></div>').join('')}
+        </div>
+        <div class="pin-keypad">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="pin-key" onclick="mgrKey(${n})">${n}</button>`).join('')}
+          <button class="pin-key wide" onclick="mgrKey(0)">0</button>
+          <button class="pin-key" onclick="mgrBack()">⌫</button>
+        </div>
+        <div class="pin-error" id="mgr-pin-err"></div>
+        <div style="margin-top:14px;font-size:11px;color:var(--subtle)">Default PIN: 1234</div>
+      </div>
+    </div>`;
+  window._mgrPin = '';
+}
+function mgrKey(n) {
+  if ((window._mgrPin || '').length >= 4) return;
+  window._mgrPin = (window._mgrPin || '') + n;
+  updatePinDots('mgr-dots', window._mgrPin.length);
+  if (window._mgrPin.length === 4) checkMgrPin();
+}
+function mgrBack() {
+  window._mgrPin = (window._mgrPin || '').slice(0, -1);
+  updatePinDots('mgr-dots', window._mgrPin.length);
+}
+function updatePinDots(id, count) {
+  document.querySelectorAll(`#${id} .pin-dot`).forEach((d, i) => d.classList.toggle('filled', i < count));
+}
+function checkMgrPin() {
+  const stored = load('gjc_mgr_pin', '1234');
+  if (window._mgrPin === stored) {
+    sessionStorage.setItem('gjc_mgr_authed', '1');
+    renderManager();
+  } else {
+    const errEl = document.getElementById('mgr-pin-err');
+    if (errEl) errEl.textContent = 'Incorrect PIN — try again';
+    setTimeout(() => {
+      window._mgrPin = '';
+      updatePinDots('mgr-dots', 0);
+      if (errEl) errEl.textContent = '';
+    }, 1200);
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   MEMBER VIEW
+   ════════════════════════════════════════════════════════ */
+function renderMember() {
+  const el = document.getElementById('view-member');
+  const authedId = sessionStorage.getItem('gjc_mbr_authed');
+  if (!authedId) { renderMemberSelect(el); return; }
+  const members = getMembers();
+  const m = members.find(x => x.id === authedId);
+  if (!m) { sessionStorage.removeItem('gjc_mbr_authed'); renderMemberSelect(el); return; }
+  renderMemberDashboard(el, m);
+}
+
+function renderMemberSelect(el) {
+  const members = getMembers();
+  el.innerHTML = `
+    <div class="member-select-overlay">
+      <div class="member-select-card">
+        <h2>My Journey</h2>
+        <p>Select your name to sign in</p>
+        <div class="member-pick-grid">
+          ${members.map(m => `
+            <button class="member-pick-btn" onclick="startMemberLogin('${m.id}')">
+              <div class="member-avatar-sm" style="background:${m.color}">${initials(m.name)}</div>
+              <div>
+                <div style="font-weight:600">${m.name}</div>
+                <div style="font-size:11px;color:var(--muted)">${m.level} · ${LEVEL_NAMES[m.level]}</div>
+              </div>
+            </button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function startMemberLogin(id) {
+  const el = document.getElementById('view-member');
+  el.innerHTML = `
+    <div class="pin-overlay">
+      <div class="pin-card">
+        <div class="pin-icon">🔑</div>
+        <h2>Enter PIN</h2>
+        <p>Your personal 4-digit PIN</p>
+        <div class="pin-dots" id="mbr-dots">
+          ${[0,1,2,3].map(() => '<div class="pin-dot"></div>').join('')}
+        </div>
+        <div class="pin-keypad">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="pin-key" onclick="mbrKey(${n},'${id}')">${n}</button>`).join('')}
+          <button class="pin-key wide" onclick="mbrKey(0,'${id}')">0</button>
+          <button class="pin-key" onclick="mbrBack()">⌫</button>
+        </div>
+        <div class="pin-error" id="mbr-pin-err"></div>
+        <div style="margin-top:10px;font-size:11px;color:var(--subtle)">Default PIN: 0000</div>
+        <button onclick="renderMemberSelect(document.getElementById('view-member'))"
+          style="margin-top:12px;font-size:12px;color:var(--muted);background:none;text-decoration:underline;border:none;cursor:pointer">
+          ← Back to member list
+        </button>
+      </div>
+    </div>`;
+  window._mbrPin = '';
+  window._mbrId  = id;
+}
+function mbrKey(n, id) {
+  if ((window._mbrPin || '').length >= 4) return;
+  window._mbrPin = (window._mbrPin || '') + n;
+  updatePinDots('mbr-dots', window._mbrPin.length);
+  if (window._mbrPin.length === 4) checkMbrPin(id);
+}
+function mbrBack() {
+  window._mbrPin = (window._mbrPin || '').slice(0, -1);
+  updatePinDots('mbr-dots', window._mbrPin.length);
+}
+function checkMbrPin(id) {
+  const members = getMembers();
+  const m = members.find(x => x.id === id);
+  if (m && window._mbrPin === (m.pin || '0000')) {
+    sessionStorage.setItem('gjc_mbr_authed', id);
+    renderMember();
+  } else {
+    const errEl = document.getElementById('mbr-pin-err');
+    if (errEl) errEl.textContent = 'Incorrect PIN — try again';
+    setTimeout(() => {
+      window._mbrPin = '';
+      updatePinDots('mbr-dots', 0);
+      if (errEl) errEl.textContent = '';
+    }, 1200);
+  }
+}
+
+function renderMemberDashboard(el, m) {
+  const latest   = m.history[m.history.length - 1] || { skills:{}, leadership:{} };
+  const overall  = latest.overall ?? 0;
+  const approved = getApproved().filter(a => a.target === m.id);
+  const feedback = approved.filter(a => a.type === 'feedback');
+  const achs     = approved.filter(a => a.type === 'achievement');
+  const radarData = SKILLS.map(sk => latest.skills[sk.key] ?? 50);
+
+  el.innerHTML = `
+    <div class="member-page">
+      <div class="mbr-hero">
+        <div class="mbr-hero-left">
+          <div class="mbr-big-av" style="background:${m.color}">${initials(m.name)}</div>
+          <div>
+            <div class="mbr-hero-name">${m.name}</div>
+            <div class="mbr-hero-sub">${LEVEL_NAMES[m.level]} · ${m.level}</div>
+          </div>
+        </div>
+        <div class="mbr-hero-score">
+          <div class="mbr-score-big">${overall}%</div>
+          <div class="mbr-score-lbl">${statusLabel(overall)}</div>
+        </div>
+      </div>
+
+      <div class="mbr-section">
+        <div class="mbr-section-hd">Growth Journey</div>
+        <div class="mbr-section-body">${buildJourneyMap(m)}</div>
+      </div>
+
+      <div class="mbr-section">
+        <div class="mbr-section-hd">Skills Web</div>
+        <div class="mbr-section-body">
+          <div class="radar-full"><canvas id="mbrRadar"></canvas></div>
+        </div>
+      </div>
+
+      <div class="mbr-section">
+        <div class="mbr-section-hd">Approved Achievements</div>
+        <div class="mbr-section-body">
+          ${achs.length ? achs.map(a => `
+            <div class="ach-item">
+              <span class="ach-cat">${a.category}</span>
+              <span>${a.text}</span>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>'}
+        </div>
+      </div>
+
+      <div class="mbr-section">
+        <div class="mbr-section-hd">Peer Feedback</div>
+        <div class="mbr-section-body">
+          ${feedback.length ? feedback.map(f => `
+            <div class="feedback-item feedback-${f.sentiment || 'positive'}">
+              ${f.text}
+              <div class="feedback-who">From ${f.from} · ${fmtDate(f.date)}</div>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No feedback yet.</div>'}
+        </div>
+      </div>
+
+      <div class="mbr-section">
+        <div class="mbr-section-hd">Log an Achievement</div>
+        <div class="mbr-section-body">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="ach-cat">
+              <option>Brand/Deal</option><option>AI Initiative</option>
+              <option>Cross-functional</option><option>Process Improvement</option>
+              <option>Mentoring</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>What did you do and what was the impact?</label>
+            <textarea id="ach-text" placeholder="e.g. Led cross-team AI automation that saved 4hrs/week"></textarea>
+          </div>
+          <button class="btn-primary" onclick="submitAchievement('${m.id}')">Submit for Approval</button>
+        </div>
+      </div>
+
+      <button onclick="sessionStorage.removeItem('gjc_mbr_authed');renderMember()"
+        class="btn-ghost" style="align-self:flex-start">← Switch User</button>
+    </div>`;
+
+  setTimeout(() => {
+    const ctx = document.getElementById('mbrRadar')?.getContext('2d');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: SKILLS.map(s => s.label.split(' ')[0]),
+        datasets: [{
+          label: 'Score', data: radarData,
+          backgroundColor: 'rgba(99,102,241,.15)',
+          borderColor: '#6366F1', borderWidth: 2,
+          pointBackgroundColor: '#6366F1', pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend:{ display:false } },
+        scales: { r: { min:0, max:100, ticks:{stepSize:25,font:{size:10},backdropColor:'transparent',color:'#94A3B8'}, grid:{color:'#E2E8F0'}, angleLines:{color:'#E2E8F0'}, pointLabels:{font:{size:10},color:'#475569'} } },
+      },
+    });
+  }, 80);
+}
+
+function submitAchievement(id) {
+  const cat  = document.getElementById('ach-cat')?.value;
+  const text = document.getElementById('ach-text')?.value?.trim();
+  if (!text) { toast('⚠ Please describe your achievement'); return; }
+  const pending = getPending();
+  pending.push({ id:'p'+Date.now(), type:'achievement', target:id, from:id, category:cat, text, date:new Date().toISOString() });
+  savePending(pending);
+  toast('✅ Submitted for manager approval!');
+  document.getElementById('ach-text').value = '';
+}
+
+/* ════════════════════════════════════════════════════════
+   PEER VIEW
+   ════════════════════════════════════════════════════════ */
+function renderPeer() {
+  const el = document.getElementById('view-peer');
+  const members = getMembers();
+  const opts = members.map(m => `<option value="${m.id}">${m.name} (${m.level})</option>`).join('');
+  el.innerHTML = `
+    <div class="peer-page">
+      <div class="peer-card">
+        <div class="peer-card-hd">
+          <div class="peer-card-title">Give Peer Feedback</div>
+          <div class="peer-card-sub">Anonymous, specific & constructive</div>
+        </div>
+        <div class="peer-card-body">
+          <div class="peer-notice">
+            ⚠️ You cannot see scores or profiles. Only the manager reviews full assessments.
+          </div>
+          <div class="form-group">
+            <label>Your Name</label>
+            <select id="peer-from">${opts}</select>
+          </div>
+          <div class="form-group">
+            <label>Feedback For</label>
+            <select id="peer-target">${opts}</select>
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="peer-sentiment">
+              <option value="positive">Positive — something they do brilliantly</option>
+              <option value="constructive">Constructive — something to work on</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Specific Behaviour (min 20 characters)</label>
+            <textarea id="peer-text" placeholder="Describe a specific situation and its impact…"></textarea>
+          </div>
+          <button class="btn-primary" onclick="submitPeer()">Submit Feedback</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function submitPeer() {
+  const from      = document.getElementById('peer-from')?.value;
+  const target    = document.getElementById('peer-target')?.value;
+  const sentiment = document.getElementById('peer-sentiment')?.value;
+  const text      = document.getElementById('peer-text')?.value?.trim();
+  if (!text || text.length < 20) { toast('⚠ Write at least 20 characters describing a specific behaviour.'); return; }
+  if (from === target) { toast('⚠ You cannot give feedback to yourself.'); return; }
+  const pending = getPending();
+  pending.push({ id:'p'+Date.now(), type:'feedback', from, target, sentiment, text, date:new Date().toISOString() });
+  savePending(pending);
+  toast('✅ Feedback submitted for manager review!');
+  document.getElementById('peer-text').value = '';
+}
+
+/* ════════════════════════════════════════════════════════
+   WORKFLOW VIEW
+   ════════════════════════════════════════════════════════ */
+function renderWorkflow() {
+  document.getElementById('view-workflow').innerHTML = `
+    <div class="workflow-page">
+      <h2>Growth Journey Workflow</h2>
+      <img src="workflow.svg" alt="Growth Journey Workflow" style="width:100%;max-width:1100px">
+    </div>`;
+}
+
+/* ── BOOT ───────────────────────────────────────────────── */
+initData();
+setRole('manager');

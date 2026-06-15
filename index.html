@@ -13,26 +13,24 @@
 <div id="app">
   <header>
     <div class="brand">
-      <span class="brand-icon">📈</span>
+      <div class="brand-mark">GJ</div>
       <div>
-        <div class="brand-eyebrow">People Framework · v3</div>
+        <div class="brand-eyebrow">People Framework</div>
         <div class="brand-name">Growth Journey Calculator</div>
       </div>
     </div>
-    <nav class="role-nav">
-      <button class="role-tab active" id="tab-manager"  onclick="setRole('manager')">👔 Manager</button>
-      <button class="role-tab"        id="tab-member"   onclick="setRole('member')">🧑 Member</button>
-      <button class="role-tab"        id="tab-peer"     onclick="setRole('peer')">🤝 Peer</button>
-      <button class="role-tab"        id="tab-workflow" onclick="setRole('workflow')">🗺 Workflow</button>
+    <nav class="topnav">
+      <button class="nav-btn active" id="tab-manager"  onclick="setRole('manager')">Manager View</button>
+      <button class="nav-btn"        id="tab-member"   onclick="setRole('member')">My Journey</button>
+      <button class="nav-btn"        id="tab-peer"     onclick="setRole('peer')">Give Feedback</button>
+      <button class="nav-btn"        id="tab-workflow" onclick="setRole('workflow')">Workflow</button>
     </nav>
   </header>
-
-  <div id="view-manager" class="view-root"></div>
-  <div id="view-member"  class="view-root" style="display:none"></div>
-  <div id="view-peer"    class="view-root" style="display:none"></div>
-  <div id="view-workflow"class="view-root" style="display:none"></div>
+  <div id="view-manager" class="view"></div>
+  <div id="view-member"  class="view" style="display:none"></div>
+  <div id="view-peer"    class="view" style="display:none"></div>
+  <div id="view-workflow"class="view" style="display:none"></div>
 </div>
-
 <div id="toast"></div>
 <script src="app.js"></script>
 </body>
