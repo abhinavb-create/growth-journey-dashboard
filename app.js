@@ -1,14 +1,12 @@
 /* ═══════════════════════════════════════════════════════════
-   Growth Journey Calculator  —  app.js  v5
+   Growth Journey Calculator  —  app.js  v6
    Navy + Blue palette · Google Sign-In · Reportees grid
+   Coaching notes, highlights, period avg, improvement badges
    ═══════════════════════════════════════════════════════════ */
 
-/* ── CONFIG — set your Google Client ID here ──────────────
-   Get one at https://console.cloud.google.com/ → OAuth 2.0
-   Leave blank for email-only demo mode.
-   ─────────────────────────────────────────────────────── */
-const GOOGLE_CLIENT_ID = '';           // e.g. '123456-abc.apps.googleusercontent.com'
-const MANAGER_EMAIL    = '';           // your work Gmail — blank = accept any during demo
+/* ── CONFIG ──────────────────────────────────────────────── */
+const GOOGLE_CLIENT_ID = '';
+const MANAGER_EMAIL    = '';
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -36,7 +34,7 @@ const LEADERSHIP = [
   { key:'decision',    label:'Decision Quality' },
 ];
 
-const AV_COLORS = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#BE185D','#065F46'];
+const AV_COLORS = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#BE185D','#065F46','#D97706'];
 
 /* ── SKILL CONTEXT ──────────────────────────────────────── */
 const SK_CTX = {
@@ -100,65 +98,71 @@ const DEF_LDR = {
 
 /* ── SEED ───────────────────────────────────────────────── */
 const SEED = [
-  { id:'m1', name:'Anam Imteyaz',          level:'JA', email:'anam@example.com',     role:'Emerging Business' },
-  { id:'m2', name:'Chandel Yajat',         level:'A',  email:'chandel@example.com',  role:'Enterprise Sales' },
-  { id:'m3', name:'Suman Soumya Dash',     level:'AM', email:'suman@example.com',    role:'Startup Hunting' },
-  { id:'m4', name:'Harsha Thomas John',    level:'SA', email:'harsha@example.com',   role:'Emerging Business' },
-  { id:'m5', name:'Kirubhavani B',         level:'A',  email:'kirub@example.com',    role:'Inside Sales' },
-  { id:'m6', name:'Priyanka Pati',         level:'A',  email:'priyanka@example.com', role:'Business Development' },
-  { id:'m7', name:'Mary L. Pulamte',       level:'JA', email:'mary@example.com',     role:'Emerging Business Ops' },
-  { id:'m8', name:'Milind Singh Bora',     level:'A',  email:'milind@example.com',   role:'Inside Sales' },
+  { id:'m1', name:'Anam Imteyaz',       level:'JA', role:'Junior Associate, Emerging Business',        email:'anam@example.com' },
+  { id:'m2', name:'Chandel Yajat',      level:'A',  role:'Associate, Enterprise Sales',               email:'chandel@example.com' },
+  { id:'m3', name:'Suman Soumya Dash',  level:'AM', role:'Associate Manager, Startup Hunting',        email:'suman@example.com' },
+  { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha@example.com' },
+  { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirub@example.com' },
+  { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi@example.com' },
+  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Emerging Business Ops',   email:'mary@example.com' },
+  { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind@example.com' },
+  { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka@example.com' },
 ];
 
 /* ── STORAGE ─────────────────────────────────────────────── */
-function ld(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
+function ld(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e) { return d; } }
 function sv(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
-const getMembers  = () => ld('gjc_members', []);
-const saveMembers = m  => sv('gjc_members', m);
-const getPending  = () => ld('gjc_pending', []);
-const savePending = p  => sv('gjc_pending', p);
-const getApproved = () => ld('gjc_approved', []);
-const saveApproved= a  => sv('gjc_approved', a);
+const getMembers   = function() { return ld('gjc_members', []); };
+const saveMembers  = function(m) { sv('gjc_members', m); };
+const getPending   = function() { return ld('gjc_pending', []); };
+const savePending  = function(p) { sv('gjc_pending', p); };
+const getApproved  = function() { return ld('gjc_approved', []); };
+const saveApproved = function(a) { sv('gjc_approved', a); };
+const getCoaching  = function() { return ld('gjc_coaching', {}); };
+const saveCoaching = function(obj) { sv('gjc_coaching', obj); };
+const getHighlights  = function() { return ld('gjc_highlights', {}); };
+const saveHighlights = function(obj) { sv('gjc_highlights', obj); };
 
 function initData() {
   let mem = getMembers();
   if (!mem.length) {
-    mem = SEED.map((s, i) => ({
-      ...s,
-      color: AV_COLORS[i % AV_COLORS.length],
-      history: [90,60,30,0].map(d => makeSnap(s.level, d)),
-    }));
+    mem = SEED.map(function(s, i) {
+      return Object.assign({}, s, {
+        color: AV_COLORS[i % AV_COLORS.length],
+        history: [90,60,30,0].map(function(d) { return makeSnap(s.level, d); }),
+      });
+    });
     saveMembers(mem);
   } else {
-    mem = mem.map((m, i) => ({ color: AV_COLORS[i % AV_COLORS.length], ...m }));
+    mem = mem.map(function(m, i) { return Object.assign({ color: AV_COLORS[i % AV_COLORS.length] }, m); });
     saveMembers(mem);
   }
 }
 
 function makeSnap(level, daysAgo) {
-  const d = new Date(); d.setDate(d.getDate() - daysAgo);
-  const skills = {}, ldr = {};
-  Object.keys(DEF_SKILLS[level]).forEach(k => {
+  var d = new Date(); d.setDate(d.getDate() - daysAgo);
+  var skills = {}, ldr = {};
+  Object.keys(DEF_SKILLS[level]).forEach(function(k) {
     skills[k] = clamp(DEF_SKILLS[level][k] + rnd(14));
   });
-  Object.keys(DEF_LDR[level]).forEach(k => {
-    const b = DEF_LDR[level][k];
+  Object.keys(DEF_LDR[level]).forEach(function(k) {
+    var b = DEF_LDR[level][k];
     ldr[k] = b > 0 ? clamp(b + rnd(14)) : 0;
   });
-  return { date: d.toISOString(), skills, leadership: ldr, note:'', comments:{}, overall: calcOverall(skills, ldr, level) };
+  return { date: d.toISOString(), skills: skills, leadership: ldr, note:'', comments:{}, overall: calcOverall(skills, ldr, level) };
 }
-const clamp = v => Math.min(100, Math.max(0, Math.round(v)));
-const rnd   = r => Math.round((Math.random() - .5) * r);
+function clamp(v) { return Math.min(100, Math.max(0, Math.round(v))); }
+function rnd(r)   { return Math.round((Math.random() - .5) * r); }
 
 /* ── SCORE HELPERS ──────────────────────────────────────── */
 function avg(obj) {
-  const vals = Object.values(obj).filter(v => v > 0);
-  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  var vals = Object.values(obj).filter(function(v) { return v > 0; });
+  return vals.length ? Math.round(vals.reduce(function(a, b) { return a + b; }, 0) / vals.length) : 0;
 }
 function calcOverall(skills, ldr, level) {
-  const w = LDR_WEIGHT[level] || 0;
+  var w = LDR_WEIGHT[level] || 0;
   if (w === 0) return avg(skills);
-  const la = avg(Object.fromEntries(Object.entries(ldr).filter(([,v]) => v > 0)));
+  var la = avg(Object.fromEntries(Object.entries(ldr).filter(function(e) { return e[1] > 0; })));
   return Math.round(avg(skills) * (1 - w) + la * w);
 }
 function stKey(s) { return s>=85?'high':s>=70?'track':s>=45?'dev':'needs'; }
@@ -172,20 +176,41 @@ function skColors(v) {
   return ['#DC2626','#FEE2E2'];
 }
 function isPromo(m) {
-  const h = m.history;
+  var h = m.history;
   if (h.length < 3) return false;
-  const l3 = h.slice(-3);
-  if (!l3.every(s => s.overall >= ({JA:70,A:72,SA:75,AM:78,M:82,SM:85}[m.level]))) return false;
-  return !Object.values(l3[l3.length-1].skills).some(v => v < 45);
+  var l3 = h.slice(-3);
+  var thr = {JA:70,A:72,SA:75,AM:78,M:82,SM:85};
+  if (!l3.every(function(s) { return s.overall >= thr[m.level]; })) return false;
+  return !Object.values(l3[l3.length-1].skills).some(function(v) { return v < 45; });
 }
-function ini(name) { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function ini(name) { return name.split(' ').map(function(w) { return w[0]; }).join('').slice(0,2).toUpperCase(); }
 function fmt(iso) { return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+function fmtShort(iso) { return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+
+/* ── PERIOD AVERAGE ─────────────────────────────────────── */
+function periodAvgSkill(member, skillKey) {
+  if (!period || period === 'all') return null;
+  var cutoff = new Date();
+  if      (period === '2w') cutoff.setDate(cutoff.getDate()-14);
+  else if (period === '1m') cutoff.setMonth(cutoff.getMonth()-1);
+  else if (period === '3m') cutoff.setMonth(cutoff.getMonth()-3);
+  else if (period === '6m') cutoff.setMonth(cutoff.getMonth()-6);
+  else if (period === '1y') cutoff.setFullYear(cutoff.getFullYear()-1);
+  else return null;
+
+  var snaps = member.history.filter(function(h) { return new Date(h.date) >= cutoff; });
+  if (!snaps.length) return null;
+  var vals = snaps.map(function(h) { return h.skills[skillKey] ?? null; }).filter(function(v) { return v !== null; });
+  if (!vals.length) return null;
+  return Math.round(vals.reduce(function(a,b) { return a+b; }, 0) / vals.length);
+}
 
 /* ── ROUTER ─────────────────────────────────────────────── */
 function setRole(role) {
-  ['manager','member','peer','workflow'].forEach(r => {
+  ['manager','member','peer','workflow'].forEach(function(r) {
     document.getElementById('view-'+r).style.display = r===role?'':'none';
-    document.getElementById('tab-'+r)?.classList.toggle('active', r===role);
+    var tab = document.getElementById('tab-'+r);
+    if (tab) tab.classList.toggle('active', r===role);
   });
   if (role==='manager')  renderManager();
   if (role==='member')   renderMember();
@@ -195,39 +220,35 @@ function setRole(role) {
 
 /* ── TOAST ──────────────────────────────────────────────── */
 function toast(msg) {
-  const t = document.getElementById('toast');
+  var t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  setTimeout(function() { t.classList.remove('show'); }, 2800);
 }
 
 /* ── HEADER USER ─────────────────────────────────────────── */
 function updateHeaderUser(user) {
-  const wrap = document.getElementById('header-user');
+  var wrap = document.getElementById('header-user');
   if (!wrap) return;
   if (!user) { wrap.innerHTML = ''; return; }
-  const picHtml = user.picture
-    ? `<img src="${user.picture}" alt="">`
+  var picHtml = user.picture
+    ? '<img src="'+user.picture+'" alt="">'
     : ini(user.name || 'U');
-  wrap.innerHTML = `
-    <div class="header-avatar">${picHtml}</div>
-    <span class="header-name">${(user.name||'').split(' ')[0]}</span>
-    <button class="btn-signout" onclick="signOut()">Sign out</button>`;
+  wrap.innerHTML = '<div class="header-avatar">'+picHtml+'</div>'
+    + '<span class="header-name">'+(user.name||'').split(' ')[0]+'</span>'
+    + '<button class="btn-signout" onclick="signOut()">Sign out</button>';
 }
 
 /* ════════════════════════════════════════════════════════
    AUTH  — Google Sign-In + email fallback
    ════════════════════════════════════════════════════════ */
-let googleUser = null;
+var googleUser = null;
 
-// Called by Google Identity Services after sign-in
 function handleGoogleCredential(response) {
   try {
-    // Decode JWT payload (no signature check needed for display)
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    var payload = JSON.parse(atob(response.credential.split('.')[1]));
     googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
     sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
     updateHeaderUser(googleUser);
-    // Check if manager
     if (!MANAGER_EMAIL || MANAGER_EMAIL === googleUser.email || MANAGER_EMAIL === '') {
       sessionStorage.setItem('gjc_mgr_authed', '1');
     }
@@ -243,34 +264,27 @@ function signOut() {
 }
 
 function renderManagerAuth(el) {
-  const gBtn = GOOGLE_CLIENT_ID
-    ? `<div id="g_id_onload"
-          data-client_id="${GOOGLE_CLIENT_ID}"
-          data-callback="handleGoogleCredential"
-          data-auto_prompt="false"></div>
-       <div class="g_id_signin" data-type="standard" data-theme="outline"
-          data-size="large" data-text="sign_in_with" data-shape="rectangular"
-          data-logo_alignment="left" style="width:100%;margin-bottom:10px"></div>`
-    : `<button class="google-btn" onclick="demoManagerLogin()">
-        <svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>
-        Sign in with Google
-      </button>`;
+  var gBtn = GOOGLE_CLIENT_ID
+    ? '<div id="g_id_onload" data-client_id="'+GOOGLE_CLIENT_ID+'" data-callback="handleGoogleCredential" data-auto_prompt="false"></div>'
+      + '<div class="g_id_signin" data-type="standard" data-theme="outline" data-size="large" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left" style="width:100%;margin-bottom:10px"></div>'
+    : '<button class="google-btn" onclick="demoManagerLogin()">'
+      + '<svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>'
+      + 'Sign in with Google</button>';
 
-  el.innerHTML = `
-    <div class="auth-overlay">
-      <div class="auth-card">
-        <div class="auth-logo">📊</div>
-        <div class="auth-title">Manager Access</div>
-        <div class="auth-sub">Sign in with your work Google account to access the Growth Journey dashboard.</div>
-        ${gBtn}
-        ${!GOOGLE_CLIENT_ID ? `
-        <div class="auth-divider">or enter email</div>
-        <input class="auth-input" id="mgr-email" type="email" placeholder="you@company.com">
-        <button class="btn-primary" style="width:100%" onclick="emailManagerLogin()">Continue</button>
-        <div class="auth-error" id="mgr-err"></div>
-        <div class="auth-hint">Demo mode — any email works. Set MANAGER_EMAIL in app.js to restrict access.</div>` : ''}
-      </div>
-    </div>`;
+  var emailFallback = !GOOGLE_CLIENT_ID
+    ? '<div class="auth-divider">or enter email</div>'
+      + '<input class="auth-input" id="mgr-email" type="email" placeholder="you@company.com">'
+      + '<button class="btn-primary" style="width:100%" onclick="emailManagerLogin()">Continue</button>'
+      + '<div class="auth-error" id="mgr-err"></div>'
+      + '<div class="auth-hint">Demo mode — any email works. Set MANAGER_EMAIL in app.js to restrict access.</div>'
+    : '';
+
+  el.innerHTML = '<div class="auth-overlay"><div class="auth-card">'
+    + '<div class="auth-logo">📊</div>'
+    + '<div class="auth-title">Manager Access</div>'
+    + '<div class="auth-sub">Sign in with your work Google account to access the Growth Journey dashboard.</div>'
+    + gBtn + emailFallback
+    + '</div></div>';
 }
 
 function demoManagerLogin() {
@@ -282,14 +296,19 @@ function demoManagerLogin() {
 }
 
 function emailManagerLogin() {
-  const email = document.getElementById('mgr-email')?.value?.trim();
+  var emailEl = document.getElementById('mgr-email');
+  var email = emailEl ? emailEl.value.trim() : '';
   if (!email || !email.includes('@')) {
-    document.getElementById('mgr-err').textContent = 'Enter a valid email.'; return;
+    var errEl = document.getElementById('mgr-err');
+    if (errEl) errEl.textContent = 'Enter a valid email.';
+    return;
   }
   if (MANAGER_EMAIL && email !== MANAGER_EMAIL) {
-    document.getElementById('mgr-err').textContent = 'Not authorised as manager.'; return;
+    var errEl2 = document.getElementById('mgr-err');
+    if (errEl2) errEl2.textContent = 'Not authorised as manager.';
+    return;
   }
-  googleUser = { name: email.split('@')[0], email, picture:'' };
+  googleUser = { name: email.split('@')[0], email: email, picture:'' };
   sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
   sessionStorage.setItem('gjc_mgr_authed','1');
   updateHeaderUser(googleUser);
@@ -299,16 +318,15 @@ function emailManagerLogin() {
 /* ════════════════════════════════════════════════════════
    MANAGER VIEW
    ════════════════════════════════════════════════════════ */
-let teamChart  = null;
-let radarChart = null;
-let selId      = null;
-let period     = 'all';
+var teamChart  = null;
+var radarChart = null;
+var selId      = null;
+var period     = 'all';
 
 function renderManager() {
-  const el = document.getElementById('view-manager');
+  var el = document.getElementById('view-manager');
 
-  // Restore session
-  const storedUser = sessionStorage.getItem('gjc_google_user');
+  var storedUser = sessionStorage.getItem('gjc_google_user');
   if (storedUser && !googleUser) {
     googleUser = JSON.parse(storedUser);
     updateHeaderUser(googleUser);
@@ -316,15 +334,15 @@ function renderManager() {
 
   if (!sessionStorage.getItem('gjc_mgr_authed')) { renderManagerAuth(el); return; }
   initData();
-  const mem = getMembers();
+  var mem = getMembers();
 
-  el.innerHTML = `<div class="page">
-    <div id="s-kpi"></div>
-    <div id="s-chart"></div>
-    <div id="s-reportees"></div>
-    <div id="s-dive"></div>
-    <div id="s-pending"></div>
-  </div>`;
+  el.innerHTML = '<div class="page">'
+    + '<div id="s-kpi"></div>'
+    + '<div id="s-chart"></div>'
+    + '<div id="s-reportees"></div>'
+    + '<div id="s-dive"></div>'
+    + '<div id="s-pending"></div>'
+    + '</div>';
 
   buildKPI(mem);
   buildChart(mem);
@@ -334,77 +352,53 @@ function renderManager() {
 
 /* ── KPI ─────────────────────────────────────────────────── */
 function buildKPI(mem) {
-  const sc    = mem.map(m => m.history[m.history.length-1]?.overall ?? 0);
-  const tavg  = Math.round(sc.reduce((a,b)=>a+b,0)/sc.length);
-  const high  = sc.filter(s=>s>=85).length;
-  const track = sc.filter(s=>s>=70&&s<85).length;
-  const needs = sc.filter(s=>s<70).length;
-  const promo = mem.filter(isPromo).length;
+  var sc    = mem.map(function(m) { return m.history[m.history.length-1] ? m.history[m.history.length-1].overall : 0; });
+  var tavg  = Math.round(sc.reduce(function(a,b) { return a+b; }, 0) / sc.length);
+  var high  = sc.filter(function(s) { return s>=85; }).length;
+  var track = sc.filter(function(s) { return s>=70&&s<85; }).length;
+  var needs = sc.filter(function(s) { return s<70; }).length;
+  var promo = mem.filter(isPromo).length;
 
-  document.getElementById('s-kpi').innerHTML = `
-    <div class="sec-hd"><div><div class="sec-title">Dashboard Overview</div></div></div>
-    <div class="kpi-row">
-      <div class="kpi-card" style="--kpi-color:#2563EB">
-        <div class="kpi-lbl">Team Average</div>
-        <div class="kpi-val">${tavg}<small style="font-size:14px;font-weight:500">%</small></div>
-        <div class="kpi-sub">${mem.length} reportees tracked</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#059669">
-        <div class="kpi-lbl">High Performers</div>
-        <div class="kpi-val">${high}</div>
-        <div class="kpi-sub">Score ≥ 85%</div>
-        <div class="kpi-pill" style="background:#D1FAE5;color:#065F46">${Math.round(high/mem.length*100)}% of team</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#2563EB">
-        <div class="kpi-lbl">On Track</div>
-        <div class="kpi-val">${track}</div>
-        <div class="kpi-sub">Score 70–84%</div>
-        <div class="kpi-pill" style="background:#DBEAFE;color:#1D4ED8">${Math.round(track/mem.length*100)}% of team</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#DC2626">
-        <div class="kpi-lbl">Needs Attention</div>
-        <div class="kpi-val">${needs}</div>
-        <div class="kpi-sub">Score &lt; 70%</div>
-        ${needs ? `<div class="kpi-pill" style="background:#FEE2E2;color:#991B1B">⚠ Review needed</div>` : `<div class="kpi-pill" style="background:#D1FAE5;color:#065F46">✓ All clear</div>`}
-      </div>
-      <div class="kpi-card" style="--kpi-color:#D97706">
-        <div class="kpi-lbl">Promo Candidates</div>
-        <div class="kpi-val">${promo}</div>
-        <div class="kpi-sub">3+ cycles at threshold</div>
-        ${promo ? `<div class="kpi-pill" style="background:#FEF3C7;color:#92400E">🏆 Promote now</div>` : ''}
-      </div>
-    </div>`;
+  document.getElementById('s-kpi').innerHTML = '<div class="sec-hd"><div><div class="sec-title">Dashboard Overview</div></div></div>'
+    + '<div class="kpi-row">'
+    + '<div class="kpi-card" style="--kpi-color:#2563EB"><div class="kpi-lbl">Team Average</div><div class="kpi-val">'+tavg+'<small style="font-size:14px;font-weight:500">%</small></div><div class="kpi-sub">'+mem.length+' reportees tracked</div></div>'
+    + '<div class="kpi-card" style="--kpi-color:#059669"><div class="kpi-lbl">High Performers</div><div class="kpi-val">'+high+'</div><div class="kpi-sub">Score &ge; 85%</div><div class="kpi-pill" style="background:#D1FAE5;color:#065F46">'+Math.round(high/mem.length*100)+'% of team</div></div>'
+    + '<div class="kpi-card" style="--kpi-color:#2563EB"><div class="kpi-lbl">On Track</div><div class="kpi-val">'+track+'</div><div class="kpi-sub">Score 70–84%</div><div class="kpi-pill" style="background:#DBEAFE;color:#1D4ED8">'+Math.round(track/mem.length*100)+'% of team</div></div>'
+    + '<div class="kpi-card" style="--kpi-color:#DC2626"><div class="kpi-lbl">Needs Attention</div><div class="kpi-val">'+needs+'</div><div class="kpi-sub">Score &lt; 70%</div>'
+    + (needs ? '<div class="kpi-pill" style="background:#FEE2E2;color:#991B1B">⚠ Review needed</div>' : '<div class="kpi-pill" style="background:#D1FAE5;color:#065F46">✓ All clear</div>')
+    + '</div>'
+    + '<div class="kpi-card" style="--kpi-color:#D97706"><div class="kpi-lbl">Promo Candidates</div><div class="kpi-val">'+promo+'</div><div class="kpi-sub">3+ cycles at threshold</div>'
+    + (promo ? '<div class="kpi-pill" style="background:#FEF3C7;color:#92400E">🏆 Promote now</div>' : '')
+    + '</div></div>';
 }
 
 /* ── TEAM LINE CHART ─────────────────────────────────────── */
 function buildChart(mem) {
-  const tabs = ['2W','1M','3M','6M','1Y','All'];
-  document.getElementById('s-chart').innerHTML = `
-    <div class="sec-hd">
-      <div><div class="sec-title">Team Progress</div><div class="sec-subtitle">Score trend across all reportees</div></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-hd">
-        <div>
-          <div class="chart-title">Score Timeline</div>
-        </div>
-        <div class="period-tabs">
-          ${tabs.map(p=>`<button class="period-tab${period===(p==='All'?'all':p.toLowerCase())?' active':''}" onclick="setPeriod('${p==='All'?'all':p.toLowerCase()}')">${p}</button>`).join('')}
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="teamChart"></canvas></div>
-    </div>`;
+  var tabs = ['2W','1M','3M','6M','1Y','All'];
+  document.getElementById('s-chart').innerHTML = '<div class="sec-hd">'
+    + '<div><div class="sec-title">Team Progress</div><div class="sec-subtitle">Score trend across all reportees</div></div>'
+    + '</div>'
+    + '<div class="chart-card">'
+    + '<div class="chart-hd"><div><div class="chart-title">Score Timeline</div></div>'
+    + '<div class="period-tabs">'
+    + tabs.map(function(p) {
+        var pKey = p === 'All' ? 'all' : p.toLowerCase();
+        return '<button class="period-tab'+(period===pKey?' active':'')+'" onclick="setPeriod(\''+pKey+'\')">'+p+'</button>';
+      }).join('')
+    + '</div></div>'
+    + '<div class="chart-wrap"><canvas id="teamChart"></canvas></div>'
+    + '</div>';
   drawTeamChart(mem);
 }
 
-function setPeriod(p) { period = p; buildChart(getMembers()); }
+function setPeriod(p) { period = p; buildChart(getMembers()); if (selId) renderDeepDive(selId); }
 
 function drawTeamChart(mem) {
   if (teamChart) { teamChart.destroy(); teamChart = null; }
-  const ctx = document.getElementById('teamChart')?.getContext('2d');
+  var ctx = document.getElementById('teamChart') ? document.getElementById('teamChart').getContext('2d') : null;
   if (!ctx) return;
 
-  const cutoff = new Date();
+  var cutoff = new Date();
   if      (period==='2w') cutoff.setDate(cutoff.getDate()-14);
   else if (period==='1m') cutoff.setMonth(cutoff.getMonth()-1);
   else if (period==='3m') cutoff.setMonth(cutoff.getMonth()-3);
@@ -412,15 +406,12 @@ function drawTeamChart(mem) {
   else if (period==='1y') cutoff.setFullYear(cutoff.getFullYear()-1);
   else cutoff.setFullYear(2000);
 
-  const datasets = mem.map((m, i) => {
-    let data = m.history.filter(h => new Date(h.date) >= cutoff);
+  var datasets = mem.map(function(m) {
+    var data = m.history.filter(function(h) { return new Date(h.date) >= cutoff; });
     if (data.length < 2) data = m.history.slice(-4);
     return {
       label: m.name.split(' ')[0],
-      data: data.map(h => ({
-        x: new Date(h.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}),
-        y: h.overall,
-      })),
+      data: data.map(function(h) { return { x: new Date(h.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}), y: h.overall }; }),
       borderColor: m.color,
       backgroundColor: m.color + '15',
       tension: .35, borderWidth: 2.5,
@@ -433,19 +424,19 @@ function drawTeamChart(mem) {
 
   teamChart = new Chart(ctx, {
     type:'line',
-    data:{ datasets },
+    data:{ datasets: datasets },
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ position:'bottom', labels:{ usePointStyle:true, pointStyle:'circle', padding:16, font:{size:11}, color:'#334155' } },
-        tooltip:{ backgroundColor:'#0F172A', padding:10, callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.y}%` } },
+        tooltip:{ backgroundColor:'#0F172A', padding:10, callbacks:{ label:function(c) { return ' '+c.dataset.label+': '+c.parsed.y+'%'; } } },
       },
       scales:{
         x:{ type:'category', grid:{display:false}, ticks:{ font:{size:11}, color:'#64748B' }, border:{display:false} },
         y:{ min:0, max:100,
             grid:{ color:'#F1F5F9', drawBorder:false },
-            ticks:{ callback:v=>v+'%', font:{size:11}, color:'#64748B', stepSize:20 },
+            ticks:{ callback:function(v) { return v+'%'; }, font:{size:11}, color:'#64748B', stepSize:20 },
             border:{ display:false },
           },
       },
@@ -455,207 +446,348 @@ function drawTeamChart(mem) {
 
 /* ── REPORTEES GRID ──────────────────────────────────────── */
 function buildReportees(mem) {
-  const cards = mem.map(m => {
-    const lat   = m.history[m.history.length-1] || {};
-    const score = lat.overall ?? 0;
-    const col   = stColor(score);
-    return `
-      <div class="rep-card${selId===m.id?' selected':''}" id="rc-${m.id}"
-           style="--rc-color:${col}" onclick="selectMember('${m.id}')">
-        <div class="rep-top">
-          <div class="rep-av" style="background:${m.color}">${ini(m.name)}</div>
-          <div>
-            <div class="rep-name">${m.name}</div>
-            <div class="rep-role">${m.role || LEVEL_NAMES[m.level]}</div>
-          </div>
-        </div>
-        <div class="rep-score-row">
-          <div class="rep-score">${score}%</div>
-          <span class="lvl">${m.level}</span>
-        </div>
-        <div class="rep-bar-bg">
-          <div class="rep-bar-fill" style="width:${score}%;background:${col}"></div>
-        </div>
-        <div class="rep-status" style="margin-top:8px">
-          <span class="${stClass(score)}"><span class="chip-dot"></span>${stLabel(score)}</span>
-          ${isPromo(m)?'<div class="promo-flag">🏆 Promo Ready</div>':''}
-        </div>
-      </div>`;
+  var cards = mem.map(function(m) {
+    var lat   = m.history[m.history.length-1] || {};
+    var score = lat.overall !== undefined ? lat.overall : 0;
+    var col   = stColor(score);
+    return '<div class="rep-card'+(selId===m.id?' selected':'')+'" id="rc-'+m.id+'"'
+      + ' style="--rc-color:'+col+'" onclick="selectMember(\''+m.id+'\')">'
+      + '<div class="rep-top">'
+      + '<div class="rep-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
+      + '<div><div class="rep-name">'+m.name+'</div><div class="rep-role">'+(m.role || LEVEL_NAMES[m.level])+'</div></div>'
+      + '</div>'
+      + '<div class="rep-score-row"><div class="rep-score">'+score+'%</div><span class="lvl">'+m.level+'</span></div>'
+      + '<div class="rep-bar-bg"><div class="rep-bar-fill" style="width:'+score+'%;background:'+col+'"></div></div>'
+      + '<div class="rep-status" style="margin-top:8px">'
+      + '<span class="'+stClass(score)+'"><span class="chip-dot"></span>'+stLabel(score)+'</span>'
+      + (isPromo(m)?'<div class="promo-flag">🏆 Promo Ready</div>':'')
+      + '</div></div>';
   }).join('');
 
-  document.getElementById('s-reportees').innerHTML = `
-    <div class="sec-hd">
-      <div><div class="sec-title">My Reportees</div><div class="sec-subtitle">Click a card to open individual deep-dive</div></div>
-    </div>
-    <div class="reportees-grid">${cards}</div>`;
+  document.getElementById('s-reportees').innerHTML = '<div class="sec-hd">'
+    + '<div><div class="sec-title">My Reportees</div><div class="sec-subtitle">Click a card to open individual deep-dive</div></div>'
+    + '</div>'
+    + '<div class="reportees-grid">'+cards+'</div>';
 }
 
 function selectMember(id) {
   selId = id;
-  document.querySelectorAll('.rep-card').forEach(c => c.classList.toggle('selected', c.id==='rc-'+id));
+  document.querySelectorAll('.rep-card').forEach(function(c) { c.classList.toggle('selected', c.id==='rc-'+id); });
   renderDeepDive(id);
-  setTimeout(()=>document.getElementById('s-dive')?.scrollIntoView({behavior:'smooth',block:'start'}),60);
+  setTimeout(function() { var el = document.getElementById('s-dive'); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+}
+
+/* ── COACHING NOTES ──────────────────────────────────────── */
+function addCoachingNote(memberId, skillKey) {
+  var ta = document.getElementById('cn-input-'+skillKey);
+  if (!ta) return;
+  var text = ta.value.trim();
+  if (!text) { toast('⚠ Write a note first'); return; }
+  var coaching = getCoaching();
+  if (!coaching[memberId]) coaching[memberId] = {};
+  if (!coaching[memberId][skillKey]) coaching[memberId][skillKey] = [];
+  coaching[memberId][skillKey].unshift({ text: text, date: new Date().toISOString() });
+  saveCoaching(coaching);
+  ta.value = '';
+  rerenderCoachingLog(memberId, skillKey);
+  toast('✅ Note saved');
+}
+
+function toggleCoachingLog(skillKey) {
+  var log = document.getElementById('cn-log-'+skillKey);
+  if (!log) return;
+  log.classList.toggle('open');
+  var toggle = document.getElementById('cn-toggle-'+skillKey);
+  if (toggle) {
+    var arrow = toggle.querySelector('.cn-arrow');
+    if (arrow) arrow.textContent = log.classList.contains('open') ? '▲' : '▼';
+  }
+}
+
+function rerenderCoachingLog(memberId, skillKey) {
+  var coaching = getCoaching();
+  var notes = (coaching[memberId] && coaching[memberId][skillKey]) ? coaching[memberId][skillKey] : [];
+  var logEl = document.getElementById('cn-log-'+skillKey);
+  if (!logEl) return;
+  var wasOpen = logEl.classList.contains('open');
+
+  var notesHtml = notes.length
+    ? notes.map(function(n) {
+        return '<div class="cn-item"><span class="cn-date">'+fmtShort(n.date)+'</span><span class="cn-text">'+escHtml(n.text)+'</span></div>';
+      }).join('')
+    : '<div class="cn-item" style="color:var(--subtle);font-style:italic">No notes yet.</div>';
+
+  logEl.innerHTML = '<div class="cn-notes">'+notesHtml+'</div>'
+    + '<div class="cn-add">'
+    + '<textarea id="cn-input-'+skillKey+'" class="cn-textarea" placeholder="Add coaching note..."></textarea>'
+    + '<button class="btn-primary btn-sm" onclick="addCoachingNote(\''+memberId+'\',\''+skillKey+'\')">Add Note</button>'
+    + '</div>';
+
+  var toggleEl = document.getElementById('cn-toggle-'+skillKey);
+  if (toggleEl) {
+    var countSpan = toggleEl.querySelector('.cn-count');
+    if (countSpan) countSpan.textContent = '('+notes.length+')';
+    var lastSpan = toggleEl.querySelector('.cn-last');
+    if (lastSpan) lastSpan.textContent = notes.length ? '· Last: '+fmtShort(notes[0].date) : '';
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── HIGHLIGHTS ──────────────────────────────────────────── */
+function addHighlight(memberId, skillKey) {
+  var formEl = document.getElementById('hl-form-'+skillKey);
+  if (!formEl) return;
+  formEl.classList.toggle('open');
+}
+
+function saveHighlight(memberId, skillKey) {
+  var formEl = document.getElementById('hl-form-'+skillKey);
+  if (!formEl) return;
+  var textEl = formEl.querySelector('.hl-input-text');
+  var typeEl = formEl.querySelector('.hl-input-type');
+  var refEl  = formEl.querySelector('.hl-input-ref');
+  var text = textEl ? textEl.value.trim() : '';
+  var type = typeEl ? typeEl.value : 'client';
+  var ref  = refEl  ? refEl.value.trim() : '';
+  if (!text) { toast('⚠ Enter highlight text'); return; }
+
+  var highlights = getHighlights();
+  if (!highlights[memberId]) highlights[memberId] = {};
+  if (!highlights[memberId][skillKey]) highlights[memberId][skillKey] = [];
+  highlights[memberId][skillKey].push({ id: 'h'+Date.now(), text: text, type: type, ref: ref, date: new Date().toISOString() });
+  saveHighlights(highlights);
+  if (textEl) textEl.value = '';
+  if (refEl)  refEl.value = '';
+  formEl.classList.remove('open');
+  rerenderHighlights(memberId, skillKey);
+  toast('✅ Highlight saved');
+}
+
+function removeHighlight(memberId, skillKey, hlId) {
+  var highlights = getHighlights();
+  if (!highlights[memberId] || !highlights[memberId][skillKey]) return;
+  highlights[memberId][skillKey] = highlights[memberId][skillKey].filter(function(h) { return h.id !== hlId; });
+  saveHighlights(highlights);
+  rerenderHighlights(memberId, skillKey);
+}
+
+function rerenderHighlights(memberId, skillKey) {
+  var highlights = getHighlights();
+  var hls = (highlights[memberId] && highlights[memberId][skillKey]) ? highlights[memberId][skillKey] : [];
+  var wrapEl = document.getElementById('hl-wrap-'+skillKey);
+  if (!wrapEl) return;
+  var tagsHtml = hls.map(function(h) {
+    return '<span class="hl-tag hl-tag-'+h.type+'">'
+      + escHtml(h.text)
+      + (h.ref ? ' <a href="'+escHtml(h.ref)+'" target="_blank" class="hl-ref">↗</a>' : '')
+      + '<button class="hl-x" onclick="removeHighlight(\''+memberId+'\',\''+skillKey+'\',\''+h.id+'\')" title="Remove">×</button>'
+      + '</span>';
+  }).join('');
+  wrapEl.innerHTML = tagsHtml + buildHlAddButtons(memberId, skillKey) + buildHlForm(memberId, skillKey);
+}
+
+function buildHlAddButtons(memberId, skillKey) {
+  return '<button class="hl-add-btn" onclick="addHighlight(\''+memberId+'\',\''+skillKey+'\')" title="Add highlight">+ Highlight</button>';
+}
+
+function buildHlForm(memberId, skillKey) {
+  return '<div class="hl-add-form" id="hl-form-'+skillKey+'">'
+    + '<input class="hl-input-text" type="text" placeholder="e.g. Razorpay deal, Q2 target">'
+    + '<select class="hl-input-type">'
+    + '<option value="client">Client</option>'
+    + '<option value="deal">Deal</option>'
+    + '<option value="achievement">Achievement</option>'
+    + '<option value="process">Process</option>'
+    + '<option value="reference">Reference</option>'
+    + '</select>'
+    + '<input class="hl-input-ref" type="url" placeholder="URL (optional)">'
+    + '<button class="btn-primary btn-sm" onclick="saveHighlight(\''+memberId+'\',\''+skillKey+'\')">Save</button>'
+    + '<button class="btn-ghost btn-sm" onclick="document.getElementById(\'hl-form-'+skillKey+'\').classList.remove(\'open\')">Cancel</button>'
+    + '</div>';
 }
 
 /* ── DEEP-DIVE ───────────────────────────────────────────── */
 function renderDeepDive(id) {
-  const mem  = getMembers();
-  const m    = mem.find(x=>x.id===id);
+  var mem  = getMembers();
+  var m    = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
   if (!m) return;
 
-  const lat  = m.history[m.history.length-1] || {skills:{},leadership:{},note:'',comments:{}};
-  const prev = m.history[m.history.length-2] || null;
-  const w    = LDR_WEIGHT[m.level];
-  const hasL = w > 0;
+  var lat  = m.history[m.history.length-1] || {skills:{},leadership:{},note:'',comments:{}};
+  var prev = m.history.length >= 2 ? m.history[m.history.length-2] : null;
+  var w    = LDR_WEIGHT[m.level];
+  var hasL = w > 0;
 
-  /* Skill rows */
-  const skillRows = SKILLS.map((sk,idx)=>{
-    const val  = lat.skills[sk.key] ?? 50;
-    const cmt  = lat.comments?.[sk.key] ?? '';
-    const [c,bg] = skColors(val);
-    const slBg = `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)`;
-    const ctx  = SK_CTX[sk.key]?.[m.level] ?? '';
-    const hint = SK_SOL[sk.key]?.[m.level] ?? '';
-    return `
-      <div class="sk-row">
-        <div class="sk-name">${sk.label}<small>${ctx}</small></div>
-        <div class="sk-mid">
-          <div class="sk-slider-row">
-            <span class="sk-score-badge" id="bd-${sk.key}" style="--sb-col:${c};--sb-bg:${bg}">${val}%</span>
-            <input type="range" class="sk-slider" min="0" max="100" value="${val}"
-              id="sl-${sk.key}" data-key="${sk.key}" data-type="skill" data-idx="${idx}"
-              oninput="syncSlider(this,'${id}')"
-              style="--sl-bg:${slBg};--sb-col:${c}">
-          </div>
-          <button class="comment-btn${cmt?' has-comment':''}" id="cb-${sk.key}"
-            onclick="toggleCmt('cbox-${sk.key}','cb-${sk.key}')">
-            <span class="cbtn-icon">${cmt?'✏️':'💬'}</span>
-            <span id="cbt-${sk.key}">${cmt?'Edit coaching note':'Add coaching note'}</span>
-          </button>
-          <div class="comment-box${cmt?' open':''}" id="cbox-${sk.key}">
-            <textarea data-key="${sk.key}" data-type="comment"
-              placeholder="${hint}">${cmt}</textarea>
-            <div class="comment-hint-text">Suggested action: ${hint}</div>
-          </div>
-        </div>
-      </div>`;
+  var coaching   = getCoaching();
+  var highlights = getHighlights();
+
+  /* Skill cards */
+  var skillCards = SKILLS.map(function(sk, idx) {
+    var val  = lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50;
+    var prevVal = prev ? (prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : null) : null;
+    var colArr = skColors(val);
+    var c = colArr[0], bg = colArr[1];
+    var slBg = 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)';
+    var ctx  = (SK_CTX[sk.key] && SK_CTX[sk.key][m.level]) ? SK_CTX[sk.key][m.level] : '';
+    var hint = (SK_SOL[sk.key] && SK_SOL[sk.key][m.level]) ? SK_SOL[sk.key][m.level] : '';
+
+    /* Trend badge */
+    var trendHtml = '';
+    if (prevVal !== null) {
+      var diff = val - prevVal;
+      if (diff > 0) {
+        trendHtml = '<span class="sk-trend-up">↑ +'+diff+'</span>';
+      } else if (diff < 0) {
+        trendHtml = '<span class="sk-trend-dn">↓ '+diff+'</span>';
+      } else {
+        trendHtml = '<span class="sk-trend-eq">=</span>';
+      }
+    }
+
+    /* Period avg badge */
+    var avgVal = periodAvgSkill(m, sk.key);
+    var avgBadge = (avgVal !== null)
+      ? '<span class="sk-avg-badge">Avg '+period.toUpperCase()+': '+avgVal+'%</span>'
+      : '';
+
+    /* Notes */
+    var notes = (coaching[id] && coaching[id][sk.key]) ? coaching[id][sk.key] : [];
+    var notesHtml = notes.length
+      ? notes.map(function(n) {
+          return '<div class="cn-item"><span class="cn-date">'+fmtShort(n.date)+'</span><span class="cn-text">'+escHtml(n.text)+'</span></div>';
+        }).join('')
+      : '<div class="cn-item" style="color:var(--subtle);font-style:italic">No notes yet.</div>';
+
+    /* Highlights */
+    var hls = (highlights[id] && highlights[id][sk.key]) ? highlights[id][sk.key] : [];
+    var hlTagsHtml = hls.map(function(h) {
+      return '<span class="hl-tag hl-tag-'+h.type+'">'
+        + escHtml(h.text)
+        + (h.ref ? ' <a href="'+escHtml(h.ref)+'" target="_blank" class="hl-ref">↗</a>' : '')
+        + '<button class="hl-x" onclick="removeHighlight(\''+id+'\',\''+sk.key+'\',\''+h.id+'\')" title="Remove">×</button>'
+        + '</span>';
+    }).join('');
+
+    return '<div class="sk-card">'
+      + '<div class="sk-card-hd">'
+      + '<div class="sk-card-name">'+sk.label+'<small>'+ctx+'</small></div>'
+      + '<div class="sk-card-badges">'+avgBadge+trendHtml+'<span class="sk-score-badge" id="bd-'+sk.key+'" style="--sb-col:'+c+';--sb-bg:'+bg+'">'+val+'%</span></div>'
+      + '</div>'
+      + '<div class="sk-slider-row">'
+      + '<input type="range" class="sk-slider" min="0" max="100" value="'+val+'"'
+      + ' id="sl-'+sk.key+'" data-key="'+sk.key+'" data-type="skill" data-idx="'+idx+'"'
+      + ' oninput="syncSlider(this,\''+id+'\')"'
+      + ' style="--sl-bg:'+slBg+';--sb-col:'+c+'">'
+      + '</div>'
+      + '<div class="hl-wrap" id="hl-wrap-'+sk.key+'">'
+      + hlTagsHtml
+      + '<button class="hl-add-btn" onclick="addHighlight(\''+id+'\',\''+sk.key+'\')" title="Add highlight">+ Highlight</button>'
+      + buildHlForm(id, sk.key)
+      + '</div>'
+      + '<div class="cn-toggle" id="cn-toggle-'+sk.key+'" onclick="toggleCoachingLog(\''+sk.key+'\')">'
+      + '💬 Coaching Notes <span class="cn-count">('+notes.length+')</span>'
+      + ' <span class="cn-last">'+(notes.length ? '· Last: '+fmtShort(notes[0].date) : '')+'</span>'
+      + '<span class="cn-arrow" style="margin-left:auto">▼</span>'
+      + '</div>'
+      + '<div class="cn-log" id="cn-log-'+sk.key+'">'
+      + '<div class="cn-notes">'+notesHtml+'</div>'
+      + '<div class="cn-add">'
+      + '<textarea id="cn-input-'+sk.key+'" class="cn-textarea" placeholder="Add coaching note..."></textarea>'
+      + '<button class="btn-primary btn-sm" onclick="addCoachingNote(\''+id+'\',\''+sk.key+'\')">Add Note</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
   }).join('');
 
   /* Leadership rows */
-  const ldrRows = LEADERSHIP.map((lk)=>{
-    const val  = lat.leadership?.[lk.key] ?? 0;
-    const cmt  = lat.comments?.['ldr_'+lk.key] ?? '';
-    const [c,bg] = skColors(val||50);
-    const slBg = hasL ? `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)` : '#E2E8F0';
-    const ctx  = LDR_CTX[lk.key]?.[m.level] ?? 'N/A at this level';
-    const hint = LDR_SOL[lk.key]?.[m.level] ?? '';
-    return `
-      <div class="sk-row${hasL?'':' disabled'}">
-        <div class="sk-name">${lk.label}<small>${ctx}</small></div>
-        <div class="sk-mid">
-          <div class="sk-slider-row">
-            <span class="sk-score-badge" id="bd-ldr-${lk.key}" style="--sb-col:${c};--sb-bg:${bg}">${hasL?val+'%':'N/A'}</span>
-            ${hasL?`
-            <input type="range" class="sk-slider" min="0" max="100" value="${val}"
-              id="sl-ldr-${lk.key}" data-key="${lk.key}" data-type="leadership"
-              oninput="syncSlider(this,'${id}')"
-              style="--sl-bg:${slBg};--sb-col:${c}">` : `<div style="flex:1;height:5px;background:#E2E8F0;border-radius:99px"></div>`}
-          </div>
-          ${hasL?`
-          <button class="comment-btn${cmt?' has-comment':''}" id="cb-ldr-${lk.key}"
-            onclick="toggleCmt('cbox-ldr-${lk.key}','cb-ldr-${lk.key}')">
-            <span class="cbtn-icon">${cmt?'✏️':'💬'}</span>
-            <span id="cbt-ldr-${lk.key}">${cmt?'Edit coaching note':'Add coaching note'}</span>
-          </button>
-          <div class="comment-box${cmt?' open':''}" id="cbox-ldr-${lk.key}">
-            <textarea data-key="ldr_${lk.key}" data-type="comment"
-              placeholder="${hint}">${cmt}</textarea>
-            <div class="comment-hint-text">Suggested action: ${hint}</div>
-          </div>` : ''}
-        </div>
-      </div>`;
+  var ldrRows = LEADERSHIP.map(function(lk) {
+    var val  = lat.leadership ? (lat.leadership[lk.key] !== undefined ? lat.leadership[lk.key] : 0) : 0;
+    var colArr = skColors(val || 50);
+    var c = colArr[0], bg = colArr[1];
+    var slBg = hasL ? 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)' : '#E2E8F0';
+    var ctx  = (LDR_CTX[lk.key] && LDR_CTX[lk.key][m.level]) ? LDR_CTX[lk.key][m.level] : 'N/A at this level';
+    var hint = (LDR_SOL[lk.key] && LDR_SOL[lk.key][m.level]) ? LDR_SOL[lk.key][m.level] : '';
+    var cmt  = (lat.comments && lat.comments['ldr_'+lk.key]) ? lat.comments['ldr_'+lk.key] : '';
+    return '<div class="sk-row'+(hasL?'':' disabled')+'">'
+      + '<div class="sk-name">'+lk.label+'<small>'+ctx+'</small></div>'
+      + '<div class="sk-mid">'
+      + '<div class="sk-slider-row">'
+      + '<span class="sk-score-badge" id="bd-ldr-'+lk.key+'" style="--sb-col:'+c+';--sb-bg:'+bg+'">'+( hasL ? val+'%' : 'N/A')+'</span>'
+      + (hasL
+          ? '<input type="range" class="sk-slider" min="0" max="100" value="'+val+'"'
+            + ' id="sl-ldr-'+lk.key+'" data-key="'+lk.key+'" data-type="leadership"'
+            + ' oninput="syncSlider(this,\''+id+'\')"'
+            + ' style="--sl-bg:'+slBg+';--sb-col:'+c+'">'
+          : '<div style="flex:1;height:5px;background:#E2E8F0;border-radius:99px"></div>')
+      + '</div>'
+      + (hasL
+          ? '<button class="comment-btn'+(cmt?' has-comment':'')+'" id="cb-ldr-'+lk.key+'"'
+            + ' onclick="toggleCmt(\'cbox-ldr-'+lk.key+'\',\'cb-ldr-'+lk.key+'\')">'
+            + '<span class="cbtn-icon">'+(cmt?'✏️':'💬')+'</span>'
+            + '<span id="cbt-ldr-'+lk.key+'">'+(cmt?'Edit coaching note':'Add coaching note')+'</span>'
+            + '</button>'
+            + '<div class="comment-box'+(cmt?' open':'')+'" id="cbox-ldr-'+lk.key+'">'
+            + '<textarea data-key="ldr_'+lk.key+'" data-type="comment" placeholder="'+hint+'">'+cmt+'</textarea>'
+            + '<div class="comment-hint-text">Suggested action: '+hint+'</div>'
+            + '</div>'
+          : '')
+      + '</div>'
+      + '</div>';
   }).join('');
 
   /* Dev plan */
-  const weak = SKILLS.filter(sk=>(lat.skills[sk.key]??50)<65);
-  const devPlan = weak.length ? `
-    <div class="devplan">
-      <div class="devplan-title">📋 Development Focus — ${weak.length} skill${weak.length>1?'s':''} below 65%</div>
-      ${weak.map(sk=>`<div class="devplan-item"><b>${sk.label}</b><span>${SK_SOL[sk.key]?.[m.level]??''}</span></div>`).join('')}
-    </div>` : '';
+  var weak = SKILLS.filter(function(sk) { return (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50) < 65; });
+  var devPlan = weak.length
+    ? '<div class="devplan">'
+      + '<div class="devplan-title">📋 Development Focus — '+weak.length+' skill'+(weak.length>1?'s':'')+' below 65%</div>'
+      + weak.map(function(sk) {
+          return '<div class="devplan-item"><b>'+sk.label+'</b><span>'+((SK_SOL[sk.key]&&SK_SOL[sk.key][m.level])?SK_SOL[sk.key][m.level]:'')+'</span></div>';
+        }).join('')
+      + '</div>'
+    : '';
 
-  const radCur = SKILLS.map(sk=>lat.skills[sk.key]??50);
-  const radPrv = prev ? SKILLS.map(sk=>prev.skills[sk.key]??50) : null;
+  var radCur = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
+  var radPrv = prev ? SKILLS.map(function(sk) { return prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : 50; }) : null;
 
-  document.getElementById('s-dive').innerHTML = `
-    <div class="sec-hd">
-      <div><div class="sec-title">Individual Deep-Dive</div></div>
-      <button class="btn-ghost btn-sm" onclick="closeDeepDive()">✕ Close</button>
-    </div>
-    <div class="deep-dive">
-      <!-- Header -->
-      <div class="dd-hd">
-        <div class="dd-member">
-          <div class="dd-av" style="background:${m.color}">${ini(m.name)}</div>
-          <div>
-            <div class="dd-name">${m.name}</div>
-            <div class="dd-meta">${LEVEL_NAMES[m.level]} · ${m.level} · ${m.history.length} snapshot${m.history.length!==1?'s':''} · ${m.role||''}</div>
-          </div>
-        </div>
-        <div class="dd-score-wrap">
-          <div class="dd-score" id="dd-score">${lat.overall??0}%</div>
-          <div class="dd-score-lbl" id="dd-score-lbl">${stLabel(lat.overall??0)}</div>
-        </div>
-      </div>
-
-      <div class="dd-body">
-        <!-- Journey -->
-        <div>
-          <div class="sec-title" style="margin-bottom:10px">Growth Journey</div>
-          ${buildJmap(m)}
-        </div>
-
-        <!-- Radar + Skills -->
-        <div class="dd-grid">
-          <!-- Radar -->
-          <div class="radar-panel">
-            <div class="radar-panel-title">Skills Web</div>
-            <div class="radar-canvas-wrap"><canvas id="radarChart"></canvas></div>
-            <div class="radar-leg">
-              <div class="radar-leg-item"><div class="radar-leg-dot" style="background:#2563EB"></div>Current</div>
-              ${radPrv?'<div class="radar-leg-item"><div class="radar-leg-dot" style="background:#CBD5E1"></div>Previous</div>':''}
-            </div>
-          </div>
-
-          <!-- Skills col -->
-          <div class="skills-col">
-            <div class="sk-sec-title">Core Skills (9)</div>
-            ${skillRows}
-
-            <div class="ldr-banner">
-              🎯 <strong>Leadership weight: ${Math.round(w*100)}%</strong>
-              &nbsp;of overall score
-              ${!hasL?'— unlocks from Senior Associate (SA)':''}
-            </div>
-
-            ${hasL?`<div class="sk-sec-title">Leadership Competencies (6)</div>${ldrRows}`:''}
-          </div>
-        </div>
-
-        ${devPlan}
-
-        <!-- Save -->
-        <div class="save-row">
-          <label>Manager Note (optional — saved with snapshot)</label>
-          <textarea id="mgr-note" placeholder="Coaching observations, context, agreed next steps…">${lat.note||''}</textarea>
-          <div class="save-actions">
-            <span style="font-size:11px;color:var(--subtle)">Last snapshot: ${lat.date?fmt(lat.date):'—'}</span>
-            <button class="btn-ghost" onclick="closeDeepDive()">Cancel</button>
-            <button class="btn-primary" onclick="saveSnapshot('${id}')">💾 Save Snapshot</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
+  document.getElementById('s-dive').innerHTML = '<div class="sec-hd">'
+    + '<div><div class="sec-title">Individual Deep-Dive</div></div>'
+    + '<button class="btn-ghost btn-sm" onclick="closeDeepDive()">✕ Close</button>'
+    + '</div>'
+    + '<div class="deep-dive">'
+    + '<div class="dd-hd">'
+    + '<div class="dd-member">'
+    + '<div class="dd-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
+    + '<div><div class="dd-name">'+m.name+'</div><div class="dd-meta">'+(LEVEL_NAMES[m.level]+' · '+m.level+' · '+m.history.length+' snapshot'+(m.history.length!==1?'s':'')+' · '+(m.role||''))+'</div></div>'
+    + '</div>'
+    + '<div class="dd-score-wrap"><div class="dd-score" id="dd-score">'+(lat.overall||0)+'%</div><div class="dd-score-lbl" id="dd-score-lbl">'+stLabel(lat.overall||0)+'</div></div>'
+    + '</div>'
+    + '<div class="dd-body">'
+    + '<div><div class="sec-title" style="margin-bottom:10px">Growth Journey</div>'+buildJmap(m)+'</div>'
+    + '<div class="dd-grid">'
+    + '<div class="radar-panel"><div class="radar-panel-title">Skills Web</div><div class="radar-canvas-wrap"><canvas id="radarChart"></canvas></div>'
+    + '<div class="radar-leg"><div class="radar-leg-item"><div class="radar-leg-dot" style="background:#2563EB"></div>Current</div>'
+    + (radPrv?'<div class="radar-leg-item"><div class="radar-leg-dot" style="background:#CBD5E1"></div>Previous</div>':'')
+    + '</div></div>'
+    + '<div class="skills-col">'
+    + '<div class="sk-sec-title">Core Skills (9)</div>'
+    + skillCards
+    + '<div class="ldr-banner">🎯 <strong>Leadership weight: '+Math.round(w*100)+'%</strong> &nbsp;of overall score'+((!hasL)?'— unlocks from Senior Associate (SA)':'')+'</div>'
+    + (hasL ? '<div class="sk-sec-title">Leadership Competencies (6)</div>'+ldrRows : '')
+    + '</div>'
+    + '</div>'
+    + devPlan
+    + '<div class="save-row">'
+    + '<label>Manager Note (optional — saved with snapshot)</label>'
+    + '<textarea id="mgr-note" placeholder="Coaching observations, context, agreed next steps…">'+(lat.note||'')+'</textarea>'
+    + '<div class="save-actions">'
+    + '<span style="font-size:11px;color:var(--subtle)">Last snapshot: '+(lat.date?fmt(lat.date):'—')+'</span>'
+    + '<button class="btn-ghost" onclick="closeDeepDive()">Cancel</button>'
+    + '<button class="btn-primary" onclick="saveSnapshot(\''+id+'\')">💾 Save Snapshot</button>'
+    + '</div></div>'
+    + '</div></div>';
 
   drawRadar(radCur, radPrv);
 }
@@ -663,120 +795,131 @@ function renderDeepDive(id) {
 function closeDeepDive() {
   selId = null;
   document.getElementById('s-dive').innerHTML = '';
-  document.querySelectorAll('.rep-card').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('.rep-card').forEach(function(c) { c.classList.remove('selected'); });
 }
 
 /* ── JOURNEY MAP ─────────────────────────────────────────── */
 function buildJmap(m) {
-  const idx = LEVELS.indexOf(m.level);
-  return `<div class="jmap">` + LEVELS.map((lv,i)=>{
-    const cls = i<idx?'done':i===idx?'current':i===idx+1?'next':i===idx+2?'goal':'';
-    const tag = i===idx?'<br><span style="font-size:8px;font-weight:700;color:#2563EB">YOU</span>':
-                i===idx+1?'<br><span style="font-size:8px;font-weight:700;color:#D97706">NEXT</span>':
-                i===idx+2?'<br><span style="font-size:8px;font-weight:700;color:#059669">GOAL</span>':'';
-    return `${i>0?`<div class="jm-conn${i<=idx?' done':''}"></div>`:''}
-      <div class="jm-node ${cls}">
-        <div class="jm-circle">${lv}</div>
-        <div class="jm-lbl">${lv}${tag}</div>
-      </div>`;
-  }).join('') + `</div>`;
+  var idx = LEVELS.indexOf(m.level);
+  var html = '<div class="jmap">';
+  LEVELS.forEach(function(lv, i) {
+    var cls = i<idx?'done':i===idx?'current':i===idx+1?'next':i===idx+2?'goal':'';
+    var tag = i===idx?'<br><span style="font-size:8px;font-weight:700;color:#2563EB">YOU</span>'
+             :i===idx+1?'<br><span style="font-size:8px;font-weight:700;color:#D97706">NEXT</span>'
+             :i===idx+2?'<br><span style="font-size:8px;font-weight:700;color:#059669">GOAL</span>':'';
+    if (i > 0) html += '<div class="jm-conn'+(i<=idx?' done':'')+'"></div>';
+    html += '<div class="jm-node '+cls+'"><div class="jm-circle">'+lv+'</div><div class="jm-lbl">'+lv+tag+'</div></div>';
+  });
+  html += '</div>';
+  return html;
 }
 
 /* ── SLIDER SYNC ─────────────────────────────────────────── */
 function syncSlider(el, memberId) {
-  const val  = +el.value;
-  const key  = el.dataset.key;
-  const type = el.dataset.type;
-  const [c, bg] = skColors(val);
-  const slBg = `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)`;
+  var val  = +el.value;
+  var key  = el.dataset.key;
+  var type = el.dataset.type;
+  var colArr = skColors(val);
+  var c = colArr[0], bg = colArr[1];
+  var slBg = 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)';
 
   el.style.setProperty('--sl-bg', slBg);
   el.style.setProperty('--sb-col', c);
 
-  const bdId = type==='leadership' ? `bd-ldr-${key}` : `bd-${key}`;
-  const bd = document.getElementById(bdId);
+  var bdId = type==='leadership' ? 'bd-ldr-'+key : 'bd-'+key;
+  var bd = document.getElementById(bdId);
   if (bd) { bd.textContent=val+'%'; bd.style.setProperty('--sb-col',c); bd.style.setProperty('--sb-bg',bg); }
 
-  // live radar update
   if (radarChart && type==='skill') {
-    const idx = +el.dataset.idx;
-    if (idx>=0) { radarChart.data.datasets[0].data[idx]=val; radarChart.update('none'); }
+    var idx2 = +el.dataset.idx;
+    if (idx2>=0) { radarChart.data.datasets[0].data[idx2]=val; radarChart.update('none'); }
   }
 
   recomputeOverall(memberId);
 }
 
 function recomputeOverall(memberId) {
-  const m = getMembers().find(x=>x.id===memberId);
+  var m = null;
+  var members = getMembers();
+  for (var i = 0; i < members.length; i++) { if (members[i].id === memberId) { m = members[i]; break; } }
   if (!m) return;
-  const s={}, l={};
-  SKILLS.forEach(sk=>{
-    const el=document.getElementById(`sl-${sk.key}`);
-    s[sk.key]=el?+el.value:(m.history[m.history.length-1]?.skills[sk.key]??50);
+  var s={}, l={};
+  var lat = m.history[m.history.length-1] || {skills:{},leadership:{}};
+  SKILLS.forEach(function(sk) {
+    var el = document.getElementById('sl-'+sk.key);
+    s[sk.key] = el ? +el.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
   });
-  LEADERSHIP.forEach(lk=>{
-    const el=document.getElementById(`sl-ldr-${lk.key}`);
-    l[lk.key]=el?+el.value:(m.history[m.history.length-1]?.leadership[lk.key]??0);
+  LEADERSHIP.forEach(function(lk) {
+    var el = document.getElementById('sl-ldr-'+lk.key);
+    l[lk.key] = el ? +el.value : (lat.leadership ? (lat.leadership[lk.key] !== undefined ? lat.leadership[lk.key] : 0) : 0);
   });
-  const o=calcOverall(s,l,m.level);
-  const se=document.getElementById('dd-score');
-  const le=document.getElementById('dd-score-lbl');
-  if(se) se.textContent=o+'%';
-  if(le) le.textContent=stLabel(o);
+  var o = calcOverall(s, l, m.level);
+  var se = document.getElementById('dd-score');
+  var le = document.getElementById('dd-score-lbl');
+  if (se) se.textContent = o+'%';
+  if (le) le.textContent = stLabel(o);
 }
 
 /* ── COMMENT TOGGLE ──────────────────────────────────────── */
 function toggleCmt(boxId, btnId) {
-  const box = document.getElementById(boxId);
-  const btn = document.getElementById(btnId);
+  var box = document.getElementById(boxId);
+  var btn = document.getElementById(btnId);
   if (!box) return;
-  const open = box.classList.toggle('open');
-  if (btn) btn.classList.toggle('has-comment', open || (box.querySelector('textarea')?.value?.trim()?.length>0));
-  const lbl = document.getElementById(btnId.replace('cb-','cbt-'));
-  if (lbl) lbl.textContent = open ? 'Hide note' : (box.querySelector('textarea')?.value?.trim() ? 'Edit coaching note' : 'Add coaching note');
+  var open = box.classList.toggle('open');
+  if (btn) {
+    var ta = box.querySelector('textarea');
+    btn.classList.toggle('has-comment', open || (ta && ta.value && ta.value.trim().length>0));
+  }
+  var lbl = document.getElementById(btnId.replace('cb-','cbt-'));
+  if (lbl) {
+    var ta2 = box.querySelector('textarea');
+    lbl.textContent = open ? 'Hide note' : (ta2 && ta2.value && ta2.value.trim() ? 'Edit coaching note' : 'Add coaching note');
+  }
 }
 
 /* ── SAVE SNAPSHOT ──────────────────────────────────────── */
 function saveSnapshot(id) {
-  const mem = getMembers();
-  const m   = mem.find(x=>x.id===id);
+  var mem = getMembers();
+  var m   = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
   if (!m) return;
 
-  const s={}, l={}, comments={};
-  SKILLS.forEach(sk=>{
-    const el=document.getElementById(`sl-${sk.key}`);
-    s[sk.key]=el?+el.value:(m.history[m.history.length-1]?.skills[sk.key]??50);
+  var s={}, l={}, comments={};
+  var lat = m.history[m.history.length-1] || {skills:{},leadership:{}};
+  SKILLS.forEach(function(sk) {
+    var el = document.getElementById('sl-'+sk.key);
+    s[sk.key] = el ? +el.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
   });
-  LEADERSHIP.forEach(lk=>{
-    const el=document.getElementById(`sl-ldr-${lk.key}`);
-    l[lk.key]=el?+el.value:(m.history[m.history.length-1]?.leadership[lk.key]??0);
+  LEADERSHIP.forEach(function(lk) {
+    var el = document.getElementById('sl-ldr-'+lk.key);
+    l[lk.key] = el ? +el.value : (lat.leadership ? (lat.leadership[lk.key] !== undefined ? lat.leadership[lk.key] : 0) : 0);
   });
-  document.querySelectorAll('.comment-box textarea').forEach(ta=>{
-    if(ta.dataset.key) comments[ta.dataset.key]=ta.value.trim();
+  document.querySelectorAll('.comment-box textarea').forEach(function(ta) {
+    if (ta.dataset.key) comments[ta.dataset.key] = ta.value.trim();
   });
 
-  // Validate weak skills need a comment
-  const noComment = SKILLS.filter(sk=>(s[sk.key]??50)<45 && !comments[sk.key]);
+  var noComment = SKILLS.filter(function(sk) { return (s[sk.key]!==undefined?s[sk.key]:50)<45 && !comments[sk.key]; });
   if (noComment.length) {
-    toast(`⚠ Add a coaching note for: ${noComment.map(x=>x.label).join(', ')}`);
-    noComment.forEach(sk=>document.getElementById(`cbox-${sk.key}`)?.classList.add('open'));
+    toast('⚠ Add a coaching note for: '+noComment.map(function(x) { return x.label; }).join(', '));
+    noComment.forEach(function(sk) { var el = document.getElementById('cbox-'+sk.key); if (el) el.classList.add('open'); });
     return;
   }
 
-  const note=document.getElementById('mgr-note')?.value?.trim()||'';
-  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note, comments, overall:calcOverall(s,l,m.level) });
+  var noteEl = document.getElementById('mgr-note');
+  var note = noteEl ? noteEl.value.trim() : '';
+  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note:note, comments:comments, overall:calcOverall(s,l,m.level) });
   saveMembers(mem);
   toast('✅ Snapshot saved!');
-  const upd=getMembers();
+  var upd = getMembers();
   buildKPI(upd); buildChart(upd); buildReportees(upd); renderDeepDive(id);
 }
 
 /* ── RADAR ───────────────────────────────────────────────── */
 function drawRadar(current, prev) {
   if (radarChart) { radarChart.destroy(); radarChart=null; }
-  const ctx=document.getElementById('radarChart')?.getContext('2d');
+  var ctx = document.getElementById('radarChart') ? document.getElementById('radarChart').getContext('2d') : null;
   if (!ctx) return;
-  const ds=[{
+  var ds = [{
     label:'Current', data:current,
     backgroundColor:'rgba(37,99,235,.12)',
     borderColor:'#2563EB', borderWidth:2,
@@ -789,14 +932,14 @@ function drawRadar(current, prev) {
     pointBackgroundColor:'#CBD5E1', pointRadius:3,
     borderDash:[4,3],
   });
-  radarChart=new Chart(ctx,{
+  radarChart = new Chart(ctx, {
     type:'radar',
-    data:{ labels:SKILLS.map(s=>s.label.split(' ')[0]), datasets:ds },
+    data:{ labels: SKILLS.map(function(s) { return s.label.split(' ')[0]; }), datasets:ds },
     options:{
       responsive:true, maintainAspectRatio:true,
       plugins:{ legend:{display:false} },
       scales:{ r:{
-        min:0,max:100,
+        min:0, max:100,
         ticks:{stepSize:25,font:{size:9},backdropColor:'transparent',color:'#94A3B8'},
         grid:{color:'#E2E8F0'},
         angleLines:{color:'#E2E8F0'},
@@ -808,100 +951,99 @@ function drawRadar(current, prev) {
 
 /* ── PENDING ─────────────────────────────────────────────── */
 function buildPending() {
-  const p   = getPending();
-  const mem = getMembers();
-  const nm  = Object.fromEntries(mem.map(m=>[m.id,m.name]));
+  var p   = getPending();
+  var mem = getMembers();
+  var nm  = {};
+  mem.forEach(function(m) { nm[m.id] = m.name; });
 
-  const items = p.length ? p.map(i=>`
-    <div class="pending-item">
-      <div class="p-icon">${i.type==='achievement'?'🏅':'💬'}</div>
-      <div class="p-content">
-        <div class="p-who">${nm[i.target]||i.target} · ${i.type==='achievement'?i.category:'Peer feedback from '+(nm[i.from]||i.from)}</div>
-        <div class="p-text">${i.text}</div>
-        <div class="p-meta">${fmt(i.date)}</div>
-      </div>
-      <div class="p-actions">
-        <button class="btn-sm btn-approve" onclick="approveItem('${i.id}')">Approve</button>
-        <button class="btn-sm btn-remove"  onclick="removeItem('${i.id}')">Remove</button>
-      </div>
-    </div>`).join('')
-    : `<div class="empty"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>`;
+  var items = p.length
+    ? p.map(function(item) {
+        return '<div class="pending-item">'
+          + '<div class="p-icon">'+(item.type==='achievement'?'🏅':'💬')+'</div>'
+          + '<div class="p-content">'
+          + '<div class="p-who">'+(nm[item.target]||item.target)+' · '+(item.type==='achievement'?item.category:'Peer feedback from '+(nm[item.from]||item.from))+'</div>'
+          + '<div class="p-text">'+item.text+'</div>'
+          + '<div class="p-meta">'+fmt(item.date)+'</div>'
+          + '</div>'
+          + '<div class="p-actions">'
+          + '<button class="btn-sm btn-approve" onclick="approveItem(\''+item.id+'\')">Approve</button>'
+          + '<button class="btn-sm btn-remove"  onclick="removeItem(\''+item.id+'\')">Remove</button>'
+          + '</div></div>';
+      }).join('')
+    : '<div class="empty"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>';
 
-  document.getElementById('s-pending').innerHTML = `
-    <div class="sec-hd"><div class="sec-title">Pending Approvals</div>${p.length?`<span class="badge-cnt">${p.length}</span>`:''}</div>
-    <div class="pending-wrap">
-      <div class="pending-hd">Approval Queue ${p.length?`<span class="badge-cnt">${p.length}</span>`:''}</div>
-      <div>${items}</div>
-    </div>`;
+  document.getElementById('s-pending').innerHTML = '<div class="sec-hd"><div class="sec-title">Pending Approvals</div>'+(p.length?'<span class="badge-cnt">'+p.length+'</span>':'')+'</div>'
+    + '<div class="pending-wrap">'
+    + '<div class="pending-hd">Approval Queue '+(p.length?'<span class="badge-cnt">'+p.length+'</span>':'')+'</div>'
+    + '<div>'+items+'</div>'
+    + '</div>';
 }
 
 function approveItem(pid) {
-  let p=getPending(); const item=p.find(x=>x.id===pid); if(!item) return;
-  savePending(p.filter(x=>x.id!==pid));
-  saveApproved([...getApproved(),{...item,approvedDate:new Date().toISOString()}]);
+  var p = getPending();
+  var item = null;
+  for (var i = 0; i < p.length; i++) { if (p[i].id === pid) { item = p[i]; break; } }
+  if (!item) return;
+  savePending(p.filter(function(x) { return x.id !== pid; }));
+  var approved = getApproved();
+  item.approvedDate = new Date().toISOString();
+  approved.push(item);
+  saveApproved(approved);
   buildPending(); toast('✅ Approved!');
 }
-function removeItem(pid) { savePending(getPending().filter(x=>x.id!==pid)); buildPending(); toast('🗑 Removed'); }
+function removeItem(pid) {
+  savePending(getPending().filter(function(x) { return x.id !== pid; }));
+  buildPending(); toast('🗑 Removed');
+}
 
 /* ════════════════════════════════════════════════════════
    MEMBER VIEW
    ════════════════════════════════════════════════════════ */
 function renderMember() {
-  const el = document.getElementById('view-member');
-  const aid = sessionStorage.getItem('gjc_mbr_authed');
+  var el = document.getElementById('view-member');
+  var aid = sessionStorage.getItem('gjc_mbr_authed');
   if (!aid) { renderMbrSelect(el); return; }
-  const mem = getMembers();
-  const m = mem.find(x=>x.id===aid);
+  var mem = getMembers();
+  var m = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === aid) { m = mem[i]; break; } }
   if (!m) { sessionStorage.removeItem('gjc_mbr_authed'); renderMbrSelect(el); return; }
   renderMbrDash(el, m);
 }
 
 function renderMbrSelect(el) {
-  const mem = getMembers();
-  el.innerHTML = `
-    <div class="auth-overlay">
-      <div class="auth-card" style="width:400px">
-        <div class="auth-logo">🙋</div>
-        <div class="auth-title">My Journey</div>
-        <div class="auth-sub">Select your name to sign in</div>
-        <div class="member-pick-list">
-          ${mem.map(m=>`
-            <button class="member-pick-btn" onclick="startMbrLogin('${m.id}')">
-              <div class="mbr-av-sm" style="background:${m.color}">${ini(m.name)}</div>
-              <div>
-                <div class="mpb-name">${m.name}</div>
-                <div class="mpb-sub">${m.level} · ${LEVEL_NAMES[m.level]}</div>
-              </div>
-            </button>`).join('')}
-        </div>
-      </div>
-    </div>`;
+  var mem = getMembers();
+  el.innerHTML = '<div class="auth-overlay"><div class="auth-card" style="width:400px">'
+    + '<div class="auth-logo">🙋</div>'
+    + '<div class="auth-title">My Journey</div>'
+    + '<div class="auth-sub">Select your name to sign in</div>'
+    + '<div class="member-pick-list">'
+    + mem.map(function(m) {
+        return '<button class="member-pick-btn" onclick="startMbrLogin(\''+m.id+'\')">'
+          + '<div class="mbr-av-sm" style="background:'+m.color+'">'+ini(m.name)+'</div>'
+          + '<div><div class="mpb-name">'+m.name+'</div><div class="mpb-sub">'+m.level+' · '+LEVEL_NAMES[m.level]+'</div></div>'
+          + '</button>';
+      }).join('')
+    + '</div></div></div>';
 }
 
 function startMbrLogin(id) {
-  const el = document.getElementById('view-member');
-  const mem = getMembers();
-  const m = mem.find(x=>x.id===id);
-  el.innerHTML = `
-    <div class="auth-overlay">
-      <div class="auth-card">
-        <div class="auth-logo">🔑</div>
-        <div class="auth-title">${m?.name.split(' ')[0]||''}</div>
-        <div class="auth-sub">Sign in with your work Google account</div>
-        <button class="google-btn" onclick="demoMbrLogin('${id}')">
-          <svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 37c-11 0-21 8-21 21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>
-          Sign in with Google
-        </button>
-        <div class="auth-divider">or enter PIN</div>
-        <input class="auth-input" id="mbr-pin" type="password" maxlength="4" placeholder="4-digit PIN" oninput="if(this.value.length===4)checkMbrPin('${id}')">
-        <div class="auth-error" id="mbr-err"></div>
-        <div class="auth-hint">Default PIN: 0000</div>
-        <button onclick="renderMbrSelect(document.getElementById('view-member'))"
-          style="margin-top:14px;font-size:12px;color:var(--muted);background:none;text-decoration:underline;cursor:pointer;border:none">
-          ← Back
-        </button>
-      </div>
-    </div>`;
+  var el = document.getElementById('view-member');
+  var mem = getMembers();
+  var m = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
+  el.innerHTML = '<div class="auth-overlay"><div class="auth-card">'
+    + '<div class="auth-logo">🔑</div>'
+    + '<div class="auth-title">'+(m ? m.name.split(' ')[0] : '')+'</div>'
+    + '<div class="auth-sub">Sign in with your work Google account</div>'
+    + '<button class="google-btn" onclick="demoMbrLogin(\''+id+'\')">'
+    + '<svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>'
+    + 'Sign in with Google</button>'
+    + '<div class="auth-divider">or enter PIN</div>'
+    + '<input class="auth-input" id="mbr-pin" type="password" maxlength="4" placeholder="4-digit PIN" oninput="if(this.value.length===4)checkMbrPin(\''+id+'\')">'
+    + '<div class="auth-error" id="mbr-err"></div>'
+    + '<div class="auth-hint">Default PIN: 0000</div>'
+    + '<button onclick="renderMbrSelect(document.getElementById(\'view-member\'))" style="margin-top:14px;font-size:12px;color:var(--muted);background:none;text-decoration:underline;cursor:pointer;border:none">← Back</button>'
+    + '</div></div>';
 }
 
 function demoMbrLogin(id) {
@@ -910,179 +1052,132 @@ function demoMbrLogin(id) {
 }
 
 function checkMbrPin(id) {
-  const pin = document.getElementById('mbr-pin')?.value;
-  const mem = getMembers();
-  const m = mem.find(x=>x.id===id);
+  var pinEl = document.getElementById('mbr-pin');
+  var pin = pinEl ? pinEl.value : '';
+  var mem = getMembers();
+  var m = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
   if (m && pin===(m.pin||'0000')) {
     sessionStorage.setItem('gjc_mbr_authed',id); renderMember();
   } else {
-    const e=document.getElementById('mbr-err');
-    if(e) e.textContent='Incorrect PIN';
-    setTimeout(()=>{
-      const inp=document.getElementById('mbr-pin');
-      if(inp) inp.value='';
-      if(e) e.textContent='';
-    },1200);
+    var e = document.getElementById('mbr-err');
+    if (e) e.textContent = 'Incorrect PIN';
+    setTimeout(function() {
+      var inp = document.getElementById('mbr-pin');
+      if (inp) inp.value = '';
+      if (e) e.textContent = '';
+    }, 1200);
   }
 }
 
 function renderMbrDash(el, m) {
-  const lat     = m.history[m.history.length-1]||{skills:{},leadership:{}};
-  const overall = lat.overall??0;
-  const approved= getApproved().filter(a=>a.target===m.id);
-  const fbs     = approved.filter(a=>a.type==='feedback');
-  const achs    = approved.filter(a=>a.type==='achievement');
-  const radData = SKILLS.map(sk=>lat.skills[sk.key]??50);
+  var lat     = m.history[m.history.length-1] || {skills:{},leadership:{}};
+  var overall = lat.overall !== undefined ? lat.overall : 0;
+  var approved = getApproved().filter(function(a) { return a.target === m.id; });
+  var fbs  = approved.filter(function(a) { return a.type === 'feedback'; });
+  var achs = approved.filter(function(a) { return a.type === 'achievement'; });
+  var radData = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
 
-  el.innerHTML = `
-    <div class="mbr-page">
-      <div class="mbr-hero">
-        <div class="mbr-hero-l">
-          <div class="mbr-hero-av" style="background:${m.color}">${ini(m.name)}</div>
-          <div>
-            <div class="mbr-hero-name">${m.name}</div>
-            <div class="mbr-hero-sub">${LEVEL_NAMES[m.level]} · ${m.level}${m.role?' · '+m.role:''}</div>
-          </div>
-        </div>
-        <div class="mbr-hero-score">
-          <div class="mbr-score-big">${overall}%</div>
-          <div class="mbr-score-lbl">${stLabel(overall)}</div>
-        </div>
-      </div>
+  el.innerHTML = '<div class="mbr-page">'
+    + '<div class="mbr-hero">'
+    + '<div class="mbr-hero-l">'
+    + '<div class="mbr-hero-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
+    + '<div><div class="mbr-hero-name">'+m.name+'</div><div class="mbr-hero-sub">'+LEVEL_NAMES[m.level]+' · '+m.level+(m.role?' · '+m.role:'')+'</div></div>'
+    + '</div>'
+    + '<div class="mbr-hero-score"><div class="mbr-score-big">'+overall+'%</div><div class="mbr-score-lbl">'+stLabel(overall)+'</div></div>'
+    + '</div>'
+    + '<div class="mbr-card"><div class="mbr-card-hd">Growth Journey</div><div class="mbr-card-body">'+buildJmap(m)+'</div></div>'
+    + '<div class="mbr-card"><div class="mbr-card-hd">Skills Web</div><div class="mbr-card-body"><div class="radar-mbr"><canvas id="mbrRadar"></canvas></div></div></div>'
+    + '<div class="mbr-card"><div class="mbr-card-hd">Approved Achievements</div><div class="mbr-card-body">'
+    + (achs.length ? achs.map(function(a) { return '<div class="ach-row"><span class="ach-cat">'+a.category+'</span><span>'+a.text+'</span></div>'; }).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>')
+    + '</div></div>'
+    + '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback</div><div class="mbr-card-body">'
+    + (fbs.length ? fbs.map(function(f) { return '<div class="fb-item fb-'+(f.sentiment||'positive')+'">'+f.text+'<div class="fb-from">From '+f.from+' · '+fmt(f.date)+'</div></div>'; }).join('') : '<div style="color:var(--muted);font-size:13px">No feedback yet.</div>')
+    + '</div></div>'
+    + '<div class="mbr-card"><div class="mbr-card-hd">Log Achievement</div><div class="mbr-card-body">'
+    + '<div class="form-group"><label>Category</label><select id="ach-cat"><option>Brand/Deal</option><option>AI Initiative</option><option>Cross-functional</option><option>Process Improvement</option><option>Mentoring</option><option>Other</option></select></div>'
+    + '<div class="form-group"><label>What you did &amp; the impact</label><textarea id="ach-text" placeholder="e.g. Led AI automation that saved 4hrs/week for the team"></textarea></div>'
+    + '<button class="btn-primary" onclick="submitAch(\''+m.id+'\')">Submit for Approval</button>'
+    + '</div></div>'
+    + '<button onclick="sessionStorage.removeItem(\'gjc_mbr_authed\');renderMember()" class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>'
+    + '</div>';
 
-      <div class="mbr-card">
-        <div class="mbr-card-hd">Growth Journey</div>
-        <div class="mbr-card-body">${buildJmap(m)}</div>
-      </div>
-
-      <div class="mbr-card">
-        <div class="mbr-card-hd">Skills Web</div>
-        <div class="mbr-card-body"><div class="radar-mbr"><canvas id="mbrRadar"></canvas></div></div>
-      </div>
-
-      <div class="mbr-card">
-        <div class="mbr-card-hd">Approved Achievements</div>
-        <div class="mbr-card-body">
-          ${achs.length?achs.map(a=>`<div class="ach-row"><span class="ach-cat">${a.category}</span><span>${a.text}</span></div>`).join(''):'<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>'}
-        </div>
-      </div>
-
-      <div class="mbr-card">
-        <div class="mbr-card-hd">Peer Feedback</div>
-        <div class="mbr-card-body">
-          ${fbs.length?fbs.map(f=>`<div class="fb-item fb-${f.sentiment||'positive'}">${f.text}<div class="fb-from">From ${f.from} · ${fmt(f.date)}</div></div>`).join(''):'<div style="color:var(--muted);font-size:13px">No feedback yet.</div>'}
-        </div>
-      </div>
-
-      <div class="mbr-card">
-        <div class="mbr-card-hd">Log Achievement</div>
-        <div class="mbr-card-body">
-          <div class="form-group">
-            <label>Category</label>
-            <select id="ach-cat">
-              <option>Brand/Deal</option><option>AI Initiative</option>
-              <option>Cross-functional</option><option>Process Improvement</option>
-              <option>Mentoring</option><option>Other</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>What you did & the impact</label>
-            <textarea id="ach-text" placeholder="e.g. Led AI automation that saved 4hrs/week for the team"></textarea>
-          </div>
-          <button class="btn-primary" onclick="submitAch('${m.id}')">Submit for Approval</button>
-        </div>
-      </div>
-
-      <button onclick="sessionStorage.removeItem('gjc_mbr_authed');renderMember()"
-        class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>
-    </div>`;
-
-  setTimeout(()=>{
-    const ctx=document.getElementById('mbrRadar')?.getContext('2d');
-    if(!ctx) return;
-    new Chart(ctx,{
+  setTimeout(function() {
+    var ctx = document.getElementById('mbrRadar') ? document.getElementById('mbrRadar').getContext('2d') : null;
+    if (!ctx) return;
+    new Chart(ctx, {
       type:'radar',
-      data:{labels:SKILLS.map(s=>s.label.split(' ')[0]),datasets:[{
-        label:'Score',data:radData,
+      data:{ labels: SKILLS.map(function(s) { return s.label.split(' ')[0]; }), datasets:[{
+        label:'Score', data:radData,
         backgroundColor:'rgba(37,99,235,.12)',
-        borderColor:'#2563EB',borderWidth:2,
-        pointBackgroundColor:'#2563EB',pointRadius:4,
+        borderColor:'#2563EB', borderWidth:2,
+        pointBackgroundColor:'#2563EB', pointRadius:4,
       }]},
       options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:9},backdropColor:'transparent',color:'#94A3B8'},grid:{color:'#E2E8F0'},angleLines:{color:'#E2E8F0'},pointLabels:{font:{size:9.5},color:'#475569'}}}},
     });
-  },80);
+  }, 80);
 }
 
 function submitAch(id) {
-  const cat=document.getElementById('ach-cat')?.value;
-  const txt=document.getElementById('ach-text')?.value?.trim();
-  if(!txt){toast('⚠ Please describe your achievement');return;}
-  savePending([...getPending(),{id:'p'+Date.now(),type:'achievement',target:id,from:id,category:cat,text:txt,date:new Date().toISOString()}]);
+  var catEl = document.getElementById('ach-cat');
+  var txtEl = document.getElementById('ach-text');
+  var cat = catEl ? catEl.value : '';
+  var txt = txtEl ? txtEl.value.trim() : '';
+  if (!txt) { toast('⚠ Please describe your achievement'); return; }
+  var pending = getPending();
+  pending.push({ id:'p'+Date.now(), type:'achievement', target:id, from:id, category:cat, text:txt, date:new Date().toISOString() });
+  savePending(pending);
   toast('✅ Submitted for manager approval!');
-  document.getElementById('ach-text').value='';
+  if (txtEl) txtEl.value = '';
 }
 
 /* ════════════════════════════════════════════════════════
    PEER VIEW
    ════════════════════════════════════════════════════════ */
 function renderPeer() {
-  const mem=getMembers();
-  const opts=mem.map(m=>`<option value="${m.id}">${m.name} (${m.level})</option>`).join('');
-  document.getElementById('view-peer').innerHTML=`
-    <div class="peer-page">
-      <div class="peer-card">
-        <div class="peer-hd">
-          <div class="peer-hd-title">Give Peer Feedback</div>
-          <div class="peer-hd-sub">Anonymous, specific & constructive</div>
-        </div>
-        <div class="peer-body">
-          <div class="peer-notice">⚠️ You cannot see scores or full profiles. Only the manager views assessments.</div>
-          <div class="form-group"><label>Your Name</label><select id="peer-from">${opts}</select></div>
-          <div class="form-group"><label>Feedback For</label><select id="peer-target">${opts}</select></div>
-          <div class="form-group">
-            <label>Type</label>
-            <select id="peer-sent">
-              <option value="positive">Positive — something they do brilliantly</option>
-              <option value="constructive">Constructive — something to improve</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Specific Behaviour (min 20 chars)</label>
-            <textarea id="peer-text" placeholder="Describe a specific situation and its impact…"></textarea>
-          </div>
-          <button class="btn-primary" onclick="submitPeer()">Submit Feedback</button>
-        </div>
-      </div>
-    </div>`;
+  var mem  = getMembers();
+  var opts = mem.map(function(m) { return '<option value="'+m.id+'">'+m.name+' ('+m.level+')</option>'; }).join('');
+  document.getElementById('view-peer').innerHTML = '<div class="peer-page">'
+    + '<div class="peer-card">'
+    + '<div class="peer-hd"><div class="peer-hd-title">Give Peer Feedback</div><div class="peer-hd-sub">Anonymous, specific &amp; constructive</div></div>'
+    + '<div class="peer-body">'
+    + '<div class="peer-notice">⚠️ You cannot see scores or full profiles. Only the manager views assessments.</div>'
+    + '<div class="form-group"><label>Your Name</label><select id="peer-from">'+opts+'</select></div>'
+    + '<div class="form-group"><label>Feedback For</label><select id="peer-target">'+opts+'</select></div>'
+    + '<div class="form-group"><label>Type</label><select id="peer-sent"><option value="positive">Positive — something they do brilliantly</option><option value="constructive">Constructive — something to improve</option></select></div>'
+    + '<div class="form-group"><label>Specific Behaviour (min 20 chars)</label><textarea id="peer-text" placeholder="Describe a specific situation and its impact…"></textarea></div>'
+    + '<button class="btn-primary" onclick="submitPeer()">Submit Feedback</button>'
+    + '</div></div></div>';
 }
 
 function submitPeer() {
-  const from=document.getElementById('peer-from')?.value;
-  const tgt =document.getElementById('peer-target')?.value;
-  const sent=document.getElementById('peer-sent')?.value;
-  const txt =document.getElementById('peer-text')?.value?.trim();
-  if(!txt||txt.length<20){toast('⚠ Write at least 20 characters describing a specific behaviour.');return;}
-  if(from===tgt){toast('⚠ You cannot give feedback to yourself.');return;}
-  savePending([...getPending(),{id:'p'+Date.now(),type:'feedback',from,target:tgt,sentiment:sent,text:txt,date:new Date().toISOString()}]);
+  var from = document.getElementById('peer-from') ? document.getElementById('peer-from').value : '';
+  var tgt  = document.getElementById('peer-target') ? document.getElementById('peer-target').value : '';
+  var sent = document.getElementById('peer-sent') ? document.getElementById('peer-sent').value : '';
+  var txtEl = document.getElementById('peer-text');
+  var txt  = txtEl ? txtEl.value.trim() : '';
+  if (!txt || txt.length < 20) { toast('⚠ Write at least 20 characters describing a specific behaviour.'); return; }
+  if (from === tgt) { toast('⚠ You cannot give feedback to yourself.'); return; }
+  var pending = getPending();
+  pending.push({ id:'p'+Date.now(), type:'feedback', from:from, target:tgt, sentiment:sent, text:txt, date:new Date().toISOString() });
+  savePending(pending);
   toast('✅ Feedback submitted for manager review!');
-  document.getElementById('peer-text').value='';
+  if (txtEl) txtEl.value = '';
 }
 
 /* ════════════════════════════════════════════════════════
    WORKFLOW VIEW
    ════════════════════════════════════════════════════════ */
 function renderWorkflow() {
-  document.getElementById('view-workflow').innerHTML=`
-    <div class="workflow-page">
-      <h2>Growth Journey Workflow</h2>
-      <img src="workflow.svg" alt="Growth Journey Workflow" style="width:100%;max-width:1100px">
-    </div>`;
+  document.getElementById('view-workflow').innerHTML = '<div class="workflow-page">'
+    + '<h2>Growth Journey Workflow</h2>'
+    + '<img src="workflow.svg" alt="Growth Journey Workflow" style="width:100%;max-width:1100px">'
+    + '</div>';
 }
 
 /* ── BOOT ────────────────────────────────────────────────── */
-// Load Google Identity Services if Client ID configured
 if (GOOGLE_CLIENT_ID) {
-  const s = document.createElement('script');
+  var s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.async = true; s.defer = true;
   document.head.appendChild(s);
