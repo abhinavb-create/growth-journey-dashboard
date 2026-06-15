@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Growth Journey Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.3rem">📈</span>
+        <div>
+          <div class="subtitle" style="font-size:.68rem;color:var(--gray-400);margin:0">People Framework · v1.0</div>
+          <h1>Growth Journey Calculator</h1>
+        </div>
+      </div>
+    </div>
+
+    <div class="role-tabs" style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <span style="font-size:.75rem;color:var(--gray-400);margin-right:4px">View as:</span>
+      <button class="role-tab active" id="tab-manager"  onclick="setRole('manager')">👔 Manager</button>
+      <button class="role-tab"        id="tab-member"   onclick="setRole('member')">🧑‍💼 Team Member</button>
+      <button class="role-tab"        id="tab-peer"     onclick="setRole('peer')">🤝 Peer Feedback</button>
+      <button class="role-tab"        id="tab-workflow" onclick="setRole('workflow')">🗺 Workflow</button>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main>
+    <div id="view-manager"></div>
+    <div id="view-member"   style="display:none"></div>
+    <div id="view-peer"     style="display:none"></div>
+    <div id="view-workflow" style="display:none"></div>
+  </main>
+
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
