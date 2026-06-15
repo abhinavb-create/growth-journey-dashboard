@@ -1,12 +1,20 @@
 /* ═══════════════════════════════════════════════════════════
-   Growth Journey Calculator  —  app.js  v4
+   Growth Journey Calculator  —  app.js  v5
+   Navy + Blue palette · Google Sign-In · Reportees grid
    ═══════════════════════════════════════════════════════════ */
 
-/* ── FRAMEWORK DATA ──────────────────────────────────────── */
+/* ── CONFIG — set your Google Client ID here ──────────────
+   Get one at https://console.cloud.google.com/ → OAuth 2.0
+   Leave blank for email-only demo mode.
+   ─────────────────────────────────────────────────────── */
+const GOOGLE_CLIENT_ID = '';           // e.g. '123456-abc.apps.googleusercontent.com'
+const MANAGER_EMAIL    = '';           // your work Gmail — blank = accept any during demo
+
+/* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
 const LEVEL_NAMES = { JA:'Junior Associate', A:'Associate', SA:'Senior Associate', AM:'Associate Manager', M:'Manager', SM:'Senior Manager' };
 const THRESHOLDS  = { JA:70, A:72, SA:75, AM:78, M:82, SM:85 };
-const LEADERSHIP_WEIGHT = { JA:0, A:0, SA:.10, AM:.25, M:.40, SM:.50 };
+const LDR_WEIGHT  = { JA:0,  A:0,  SA:.10, AM:.25, M:.40, SM:.50 };
 
 const SKILLS = [
   { key:'sales',        label:'Sales & Revenue' },
@@ -17,7 +25,7 @@ const SKILLS = [
   { key:'xfunc',        label:'Cross-functional' },
   { key:'escalation',   label:'Escalation Quality' },
   { key:'comms',        label:'Communication' },
-  { key:'enthusiasm',   label:'Enthusiasm' },
+  { key:'enthusiasm',   label:'Enthusiasm & Drive' },
 ];
 const LEADERSHIP = [
   { key:'people',      label:'People Leadership' },
@@ -28,52 +36,52 @@ const LEADERSHIP = [
   { key:'decision',    label:'Decision Quality' },
 ];
 
-const AVATAR_COLORS = ['#6366F1','#10B981','#F59E0B','#F43F5E','#3B82F6','#8B5CF6','#06B6D4','#EC4899'];
+const AV_COLORS = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#BE185D','#065F46'];
 
 /* ── SKILL CONTEXT ──────────────────────────────────────── */
-const SKILL_CONTEXT = {
-  sales:        { JA:'Supports deals under guidance', A:'Manages pipeline independently', SA:'Owns revenue targets', AM:'Coaches team on sales', M:'Drives team revenue growth', SM:'Sets org-level sales strategy' },
-  reporting:    { JA:'Pulls standard reports', A:'Builds custom reports', SA:'Defines reporting frameworks', AM:'Derives insights for strategy', M:'Governs data quality across team', SM:'Creates org-wide reporting vision' },
+const SK_CTX = {
+  sales:        { JA:'Supports deals under guidance', A:'Manages own pipeline', SA:'Owns revenue targets', AM:'Coaches team on sales', M:'Drives team revenue', SM:'Sets org sales strategy' },
+  reporting:    { JA:'Pulls standard reports', A:'Builds custom reports', SA:'Defines reporting frameworks', AM:'Derives strategic insights', M:'Governs data quality', SM:'Org-wide analytics vision' },
   maturity:     { JA:'Professional, follows norms', A:'Self-aware in feedback', SA:'Models maturity for juniors', AM:'Handles ambiguity calmly', M:'Leads through uncertainty', SM:'Shapes culture of maturity' },
-  independence: { JA:'Needs check-ins daily', A:'Works autonomously on tasks', SA:'Owns projects end-to-end', AM:'Directs others with autonomy', M:'Sets direction for function', SM:'Operates with full strategic independence' },
-  ai:           { JA:'Uses AI tools with help', A:'Integrates AI in daily workflow', SA:'Identifies AI opportunities', AM:'Leads AI initiatives for team', M:'Sets AI adoption strategy', SM:'Drives org-wide AI transformation' },
-  xfunc:        { JA:'Works within own team', A:'Collaborates across 1-2 functions', SA:'Partners across multiple teams', AM:'Drives cross-functional projects', M:'Aligns multiple functions', SM:'Builds cross-org partnerships' },
-  escalation:   { JA:'Escalates with context', A:'Proposes solutions when escalating', SA:'Resolves most issues independently', AM:'Guides team on escalation judgement', M:'Sets escalation framework', SM:'Rarely needs to escalate; resolves strategically' },
-  comms:        { JA:'Clear written & verbal basics', A:'Adapts style to audience', SA:'Influences through communication', AM:'Communicates vision to team', M:'Communicates externally & upward effectively', SM:'Represents org in high-stakes forums' },
-  enthusiasm:   { JA:'Shows up positively', A:'Proactively contributes ideas', SA:'Energises team & drives initiatives', AM:'Builds team morale and culture', M:'Champions culture across function', SM:'Is a brand ambassador for the org' },
+  independence: { JA:'Needs daily check-ins', A:'Works autonomously on tasks', SA:'Owns projects end-to-end', AM:'Directs others autonomously', M:'Sets direction for function', SM:'Full strategic independence' },
+  ai:           { JA:'Uses AI tools with help', A:'Integrates AI in workflow', SA:'Identifies AI opportunities', AM:'Leads AI initiatives', M:'Sets AI adoption strategy', SM:'Drives org-wide AI transformation' },
+  xfunc:        { JA:'Works within own team', A:'Collaborates across 1-2 teams', SA:'Partners across multiple functions', AM:'Drives cross-functional projects', M:'Aligns multiple functions', SM:'Builds cross-org partnerships' },
+  escalation:   { JA:'Escalates with context', A:'Proposes solutions when escalating', SA:'Resolves most issues independently', AM:'Guides team on escalation judgement', M:'Sets escalation framework', SM:'Resolves strategically, rarely escalates' },
+  comms:        { JA:'Clear written & verbal basics', A:'Adapts style to audience', SA:'Influences through communication', AM:'Communicates vision to team', M:'Effective upward & external comms', SM:'Represents org in high-stakes forums' },
+  enthusiasm:   { JA:'Shows up positively', A:'Contributes ideas proactively', SA:'Energises team & drives initiatives', AM:'Builds morale and culture', M:'Champions culture across function', SM:'Brand ambassador for org' },
 };
-const LEADERSHIP_CONTEXT = {
-  people:      { JA:'N/A', A:'N/A', SA:'Begins mentoring juniors', AM:'Manages 1-3 direct reports', M:'Leads team of 5-10', SM:'Leads managers' },
-  vision:      { JA:'N/A', A:'N/A', SA:'Understands team goals', AM:'Sets team objectives', M:'Drives function strategy', SM:'Shapes org direction' },
-  stakeholder: { JA:'N/A', A:'N/A', SA:'Manages key stakeholders', AM:'Influences senior stakeholders', M:'Partners with leadership', SM:'Board-level relationships' },
-  developing:  { JA:'N/A', A:'N/A', SA:'Provides peer coaching', AM:'Runs development plans', M:'Builds leaders within team', SM:'Creates talent pipeline' },
-  resilience:  { JA:'N/A', A:'N/A', SA:'Bounces back quickly', AM:'Models resilience under pressure', M:'Sustains team performance in crisis', SM:'Organisational resilience architect' },
-  decision:    { JA:'N/A', A:'N/A', SA:'Makes sound independent calls', AM:'Decides under ambiguity', M:'High-stakes decision-making', SM:'Enterprise-level decisions' },
+const LDR_CTX = {
+  people:      { SA:'Begins mentoring juniors', AM:'Manages 1-3 direct reports', M:'Leads team of 5-10', SM:'Leads managers' },
+  vision:      { SA:'Understands team goals', AM:'Sets team objectives', M:'Drives function strategy', SM:'Shapes org direction' },
+  stakeholder: { SA:'Manages key stakeholders', AM:'Influences senior stakeholders', M:'Partners with leadership', SM:'Board-level relationships' },
+  developing:  { SA:'Provides peer coaching', AM:'Runs development plans', M:'Builds leaders within team', SM:'Creates talent pipeline' },
+  resilience:  { SA:'Bounces back quickly', AM:'Models resilience under pressure', M:'Sustains team in crisis', SM:'Organisational resilience architect' },
+  decision:    { SA:'Makes sound independent calls', AM:'Decides under ambiguity', M:'High-stakes decision-making', SM:'Enterprise-level decisions' },
 };
 
 /* ── DEVELOPMENT SOLUTIONS ──────────────────────────────── */
-const SKILL_SOLUTIONS = {
-  sales:        { JA:'Shadow 2 senior calls/week', A:'Own 3 accounts end-to-end', SA:'Set and hit personal revenue target', AM:'Run weekly pipeline reviews with team', M:'Design team incentive structure', SM:'Create sales playbook for org' },
-  reporting:    { JA:'Complete Data Basics course', A:'Build one dashboard from scratch', SA:'Define team reporting SLAs', AM:'Present data insights to leadership monthly', M:'Audit team data quality quarterly', SM:'Roll out org-wide analytics platform' },
-  maturity:     { JA:'Seek feedback after each client call', A:'Practice structured self-reflection weekly', SA:'Lead by example in difficult conversations', AM:'Take on a stretch assignment outside comfort zone', M:'Coach team through change', SM:'Define maturity standards for org' },
+const SK_SOL = {
+  sales:        { JA:'Shadow 2 senior calls per week', A:'Own 3 accounts end-to-end', SA:'Set & hit a personal revenue target', AM:'Run weekly pipeline reviews with the team', M:'Design a team incentive structure', SM:'Create the sales playbook for the org' },
+  reporting:    { JA:'Complete a Data Basics course', A:'Build one dashboard from scratch', SA:'Define team reporting SLAs', AM:'Present data insights to leadership monthly', M:'Audit team data quality quarterly', SM:'Roll out org-wide analytics platform' },
+  maturity:     { JA:'Seek feedback after each client call', A:'Practice structured self-reflection weekly', SA:'Lead by example in difficult conversations', AM:'Take a stretch assignment outside comfort zone', M:'Coach team through change', SM:'Define maturity standards for org' },
   independence: { JA:'Complete one task with zero check-ins', A:'Own a week-long project solo', SA:'Deliver quarter goal with minimal oversight', AM:'Set OKRs for team independently', M:'Define function roadmap', SM:'Lead org-wide initiative autonomously' },
-  ai:           { JA:'Try 2 new AI tools this month', A:'Replace one manual process with AI', SA:'Run team demo of AI workflow', AM:'Set AI adoption goal for team', M:'Launch AI pilot project', SM:'Publish AI strategy for org' },
-  xfunc:        { JA:'Join one cross-team meeting', A:'Collaborate on shared project', SA:'Drive one cross-functional initiative', AM:'Lead cross-team working group', M:'Own cross-functional OKRs', SM:'Build partnership framework across functions' },
-  escalation:   { JA:'Always include context + attempted solution', A:'Present 2 options when escalating', SA:'Resolve before escalating by default', AM:'Create escalation decision tree for team', M:'Monthly review of team escalation patterns', SM:'Set escalation policy for org' },
-  comms:        { JA:'Write one crisp email per stakeholder type', A:'Present in 2 cross-team meetings', SA:'Create communications template for team', AM:'Run monthly team all-hands', M:'Quarterly leadership update deck', SM:'Keynote at org all-hands' },
-  enthusiasm:   { JA:'Volunteer for one initiative', A:'Submit one improvement idea per month', SA:'Champion a new initiative from scratch', AM:'Create team recognition rituals', M:'Launch culture programme', SM:'Be visible face of org values' },
+  ai:           { JA:'Try 2 new AI tools this month', A:'Replace one manual process with AI', SA:'Run a team demo of your AI workflow', AM:'Set AI adoption goal for team', M:'Launch an AI pilot project', SM:'Publish the AI strategy for org' },
+  xfunc:        { JA:'Join one cross-team meeting', A:'Collaborate on a shared project', SA:'Drive one cross-functional initiative', AM:'Lead a cross-team working group', M:'Own cross-functional OKRs', SM:'Build a partnership framework across functions' },
+  escalation:   { JA:'Always include context + what you tried', A:'Present 2 options when escalating', SA:'Resolve before escalating by default', AM:'Create an escalation decision tree for team', M:'Monthly review of team escalation patterns', SM:'Set escalation policy for the org' },
+  comms:        { JA:'Write one crisp email per stakeholder type', A:'Present in 2 cross-team meetings', SA:'Create a comms template for the team', AM:'Run monthly team all-hands', M:'Quarterly leadership update deck', SM:'Keynote at org all-hands' },
+  enthusiasm:   { JA:'Volunteer for one initiative', A:'Submit one improvement idea per month', SA:'Champion a new initiative from scratch', AM:'Create team recognition rituals', M:'Launch a culture programme', SM:'Be the visible face of org values' },
 };
-const LEADERSHIP_SOLUTIONS = {
-  people:      { SA:'Start 1:1s with one junior weekly', AM:'Read "Radical Candor", give structured feedback', M:'Complete leadership coaching programme', SM:'Build succession plan for each direct report' },
-  vision:      { SA:'Write team vision doc for next quarter', AM:'Run team strategy session', M:'Create 6-month function roadmap', SM:'Co-create org 3-year strategy with exec' },
-  stakeholder: { SA:'Map top 5 stakeholders and meet monthly', AM:'Present to VP-level quarterly', M:'Join cross-org steering committee', SM:'Build exec relationships proactively' },
-  developing:  { SA:'Create development plan for one junior', AM:'Run monthly skills workshops', M:'Design team rotation programme', SM:'Launch mentorship programme across org' },
+const LDR_SOL = {
+  people:      { SA:'Start 1:1s with one junior weekly', AM:'Read "Radical Candor"; give structured feedback', M:'Complete a leadership coaching programme', SM:'Build succession plan for each direct report' },
+  vision:      { SA:'Write a team vision doc for next quarter', AM:'Run a team strategy session', M:'Create a 6-month function roadmap', SM:'Co-create org 3-year strategy with exec' },
+  stakeholder: { SA:'Map top 5 stakeholders; meet them monthly', AM:'Present to VP-level quarterly', M:'Join a cross-org steering committee', SM:'Build exec relationships proactively' },
+  developing:  { SA:'Create a development plan for one junior', AM:'Run monthly skills workshops', M:'Design a team rotation programme', SM:'Launch org-wide mentorship programme' },
   resilience:  { SA:'Journal after setbacks; identify patterns', AM:'Lead through one major change project', M:'Run resilience workshops for team', SM:'Shape org change management capability' },
-  decision:    { SA:'Document reasoning for major decisions', AM:'Use RACI for all team decisions', M:'Review decision quality monthly in retros', SM:'Implement decision-making framework org-wide' },
+  decision:    { SA:'Document reasoning for major decisions', AM:'Use RACI for all team decisions', M:'Review decision quality monthly in retros', SM:'Implement a decision-making framework org-wide' },
 };
 
-/* ── DEFAULT SCORES BY LEVEL ────────────────────────────── */
-const DEFAULT_SCORES = {
+/* ── DEFAULT SCORES ─────────────────────────────────────── */
+const DEF_SKILLS = {
   JA: { sales:48, reporting:45, maturity:50, independence:42, ai:55, xfunc:40, escalation:48, comms:50, enthusiasm:60 },
   A:  { sales:58, reporting:55, maturity:60, independence:55, ai:62, xfunc:52, escalation:58, comms:62, enthusiasm:68 },
   SA: { sales:68, reporting:65, maturity:70, independence:66, ai:72, xfunc:64, escalation:68, comms:70, enthusiasm:75 },
@@ -81,791 +89,788 @@ const DEFAULT_SCORES = {
   M:  { sales:82, reporting:80, maturity:85, independence:82, ai:84, xfunc:80, escalation:82, comms:84, enthusiasm:88 },
   SM: { sales:88, reporting:86, maturity:90, independence:88, ai:90, xfunc:86, escalation:88, comms:90, enthusiasm:92 },
 };
-const DEFAULT_LEADERSHIP = {
-  JA: { people:0,  vision:0,  stakeholder:0,  developing:0,  resilience:0,  decision:0  },
-  A:  { people:0,  vision:0,  stakeholder:0,  developing:0,  resilience:0,  decision:0  },
+const DEF_LDR = {
+  JA: { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 },
+  A:  { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 },
   SA: { people:58, vision:52, stakeholder:55, developing:50, resilience:62, decision:58 },
   AM: { people:70, vision:65, stakeholder:68, developing:64, resilience:72, decision:70 },
   M:  { people:80, vision:76, stakeholder:78, developing:75, resilience:82, decision:79 },
   SM: { people:88, vision:84, stakeholder:86, developing:83, resilience:88, decision:86 },
 };
 
-/* ── SEED DATA ──────────────────────────────────────────── */
-const SEED_MEMBERS = [
-  { id:'m1', name:'Priya Sharma',  level:'SA', pin:'0000' },
-  { id:'m2', name:'Rohan Mehta',   level:'A',  pin:'0000' },
-  { id:'m3', name:'Ananya Iyer',   level:'AM', pin:'0000' },
-  { id:'m4', name:'Karan Patel',   level:'JA', pin:'0000' },
-  { id:'m5', name:'Divya Nair',    level:'SA', pin:'0000' },
-  { id:'m6', name:'Arjun Singh',   level:'M',  pin:'0000' },
-  { id:'m7', name:'Sneha Rao',     level:'A',  pin:'0000' },
-  { id:'m8', name:'Vikram Gupta',  level:'AM', pin:'0000' },
+/* ── SEED ───────────────────────────────────────────────── */
+const SEED = [
+  { id:'m1', name:'Anam Imteyaz',          level:'JA', email:'anam@example.com',     role:'Emerging Business' },
+  { id:'m2', name:'Chandel Yajat',         level:'A',  email:'chandel@example.com',  role:'Enterprise Sales' },
+  { id:'m3', name:'Suman Soumya Dash',     level:'AM', email:'suman@example.com',    role:'Startup Hunting' },
+  { id:'m4', name:'Harsha Thomas John',    level:'SA', email:'harsha@example.com',   role:'Emerging Business' },
+  { id:'m5', name:'Kirubhavani B',         level:'A',  email:'kirub@example.com',    role:'Inside Sales' },
+  { id:'m6', name:'Priyanka Pati',         level:'A',  email:'priyanka@example.com', role:'Business Development' },
+  { id:'m7', name:'Mary L. Pulamte',       level:'JA', email:'mary@example.com',     role:'Emerging Business Ops' },
+  { id:'m8', name:'Milind Singh Bora',     level:'A',  email:'milind@example.com',   role:'Inside Sales' },
 ];
 
-/* ── STORAGE ────────────────────────────────────────────── */
-function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; } }
-function save(key, val)  { localStorage.setItem(key, JSON.stringify(val)); }
-function getMembers()    { return load('gjc_members', []); }
-function saveMembers(m)  { save('gjc_members', m); }
-function getPending()    { return load('gjc_pending', []); }
-function savePending(p)  { save('gjc_pending', p); }
-function getApproved()   { return load('gjc_approved', []); }
-function saveApproved(a) { save('gjc_approved', a); }
+/* ── STORAGE ─────────────────────────────────────────────── */
+function ld(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
+function sv(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+const getMembers  = () => ld('gjc_members', []);
+const saveMembers = m  => sv('gjc_members', m);
+const getPending  = () => ld('gjc_pending', []);
+const savePending = p  => sv('gjc_pending', p);
+const getApproved = () => ld('gjc_approved', []);
+const saveApproved= a  => sv('gjc_approved', a);
 
 function initData() {
-  let members = getMembers();
-  if (!members.length) {
-    members = SEED_MEMBERS.map((s, i) => {
-      const snaps = [];
-      // seed 4 historical snapshots spread over ~3 months
-      [90, 60, 30, 0].forEach(daysAgo => snaps.push(makeSnap(s.level, daysAgo)));
-      return { ...s, color: AVATAR_COLORS[i % AVATAR_COLORS.length], history: snaps };
-    });
-    saveMembers(members);
+  let mem = getMembers();
+  if (!mem.length) {
+    mem = SEED.map((s, i) => ({
+      ...s,
+      color: AV_COLORS[i % AV_COLORS.length],
+      history: [90,60,30,0].map(d => makeSnap(s.level, d)),
+    }));
+    saveMembers(mem);
   } else {
-    members = members.map((m, i) => ({ color: AVATAR_COLORS[i % AVATAR_COLORS.length], ...m }));
-    saveMembers(members);
+    mem = mem.map((m, i) => ({ color: AV_COLORS[i % AV_COLORS.length], ...m }));
+    saveMembers(mem);
   }
 }
 
 function makeSnap(level, daysAgo) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  const skills = {};
-  const leadership = {};
-  Object.keys(DEFAULT_SCORES[level]).forEach(k => {
-    skills[k] = Math.min(100, Math.max(0, DEFAULT_SCORES[level][k] + Math.round((Math.random() - .5) * 12)));
+  const d = new Date(); d.setDate(d.getDate() - daysAgo);
+  const skills = {}, ldr = {};
+  Object.keys(DEF_SKILLS[level]).forEach(k => {
+    skills[k] = clamp(DEF_SKILLS[level][k] + rnd(14));
   });
-  Object.keys(DEFAULT_LEADERSHIP[level]).forEach(k => {
-    const base = DEFAULT_LEADERSHIP[level][k];
-    leadership[k] = base > 0 ? Math.min(100, Math.max(0, base + Math.round((Math.random() - .5) * 12))) : 0;
+  Object.keys(DEF_LDR[level]).forEach(k => {
+    const b = DEF_LDR[level][k];
+    ldr[k] = b > 0 ? clamp(b + rnd(14)) : 0;
   });
-  return { date: d.toISOString(), skills, leadership, note: '', comments: {}, overall: calcOverall(skills, leadership, level) };
+  return { date: d.toISOString(), skills, leadership: ldr, note:'', comments:{}, overall: calcOverall(skills, ldr, level) };
 }
+const clamp = v => Math.min(100, Math.max(0, Math.round(v)));
+const rnd   = r => Math.round((Math.random() - .5) * r);
 
 /* ── SCORE HELPERS ──────────────────────────────────────── */
 function avg(obj) {
   const vals = Object.values(obj).filter(v => v > 0);
   return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
 }
-function calcOverall(skills, leadership, level) {
-  const w = LEADERSHIP_WEIGHT[level] || 0;
+function calcOverall(skills, ldr, level) {
+  const w = LDR_WEIGHT[level] || 0;
   if (w === 0) return avg(skills);
-  const ldrVals = Object.values(leadership).filter(v => v > 0);
-  const avgL = ldrVals.length ? ldrVals.reduce((a, b) => a + b, 0) / ldrVals.length : 0;
-  return Math.round(avg(skills) * (1 - w) + avgL * w);
+  const la = avg(Object.fromEntries(Object.entries(ldr).filter(([,v]) => v > 0)));
+  return Math.round(avg(skills) * (1 - w) + la * w);
 }
-function scoreStatus(s) {
-  if (s >= 85) return 'high';
-  if (s >= 70) return 'track';
-  if (s >= 45) return 'dev';
-  return 'needs';
+function stKey(s) { return s>=85?'high':s>=70?'track':s>=45?'dev':'needs'; }
+function stLabel(s) { return {high:'High Performer',track:'On Track',dev:'Developing',needs:'Needs Attention'}[stKey(s)]; }
+function stClass(s) { return 'chip chip-'+stKey(s); }
+function stColor(s) { return {high:'#059669',track:'#2563EB',dev:'#D97706',needs:'#DC2626'}[stKey(s)]; }
+function skColors(v) {
+  if (v >= 85) return ['#059669','#D1FAE5'];
+  if (v >= 70) return ['#2563EB','#EFF6FF'];
+  if (v >= 45) return ['#D97706','#FEF3C7'];
+  return ['#DC2626','#FEE2E2'];
 }
-function statusLabel(s) {
-  return { high:'High Performer', track:'On Track', dev:'Developing', needs:'Needs Attention' }[scoreStatus(s)];
-}
-function statusClass(s) {
-  return { high:'st-high', track:'st-track', dev:'st-dev', needs:'st-needs' }[scoreStatus(s)];
-}
-function statusColor(s) {
-  return { high:'#10B981', track:'#3B82F6', dev:'#F59E0B', needs:'#F43F5E' }[scoreStatus(s)];
-}
-function skColor(v) {
-  if (v >= 85) return ['#10B981', '#ECFDF5'];
-  if (v >= 70) return ['#3B82F6', '#EFF6FF'];
-  if (v >= 45) return ['#F59E0B', '#FFFBEB'];
-  return ['#F43F5E', '#FFF1F2'];
-}
-function isPromoCandidate(member) {
-  const h = member.history;
+function isPromo(m) {
+  const h = m.history;
   if (h.length < 3) return false;
-  const last3 = h.slice(-3);
-  const thr = THRESHOLDS[member.level];
-  if (!last3.every(s => s.overall >= thr)) return false;
-  return !Object.values(last3[last3.length - 1].skills).some(v => v < 45);
+  const l3 = h.slice(-3);
+  if (!l3.every(s => s.overall >= ({JA:70,A:72,SA:75,AM:78,M:82,SM:85}[m.level]))) return false;
+  return !Object.values(l3[l3.length-1].skills).some(v => v < 45);
 }
-function initials(name) { return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
-function fmtDate(iso)   { return new Date(iso).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); }
+function ini(name) { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function fmt(iso) { return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
 
 /* ── ROUTER ─────────────────────────────────────────────── */
-let currentRole = 'manager';
 function setRole(role) {
-  currentRole = role;
   ['manager','member','peer','workflow'].forEach(r => {
-    document.getElementById('view-' + r).style.display = r === role ? '' : 'none';
-    document.getElementById('tab-' + r)?.classList.toggle('active', r === role);
+    document.getElementById('view-'+r).style.display = r===role?'':'none';
+    document.getElementById('tab-'+r)?.classList.toggle('active', r===role);
   });
-  if (role === 'manager')  renderManager();
-  if (role === 'member')   renderMember();
-  if (role === 'peer')     renderPeer();
-  if (role === 'workflow') renderWorkflow();
+  if (role==='manager')  renderManager();
+  if (role==='member')   renderMember();
+  if (role==='peer')     renderPeer();
+  if (role==='workflow') renderWorkflow();
 }
 
 /* ── TOAST ──────────────────────────────────────────────── */
 function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── HEADER USER ─────────────────────────────────────────── */
+function updateHeaderUser(user) {
+  const wrap = document.getElementById('header-user');
+  if (!wrap) return;
+  if (!user) { wrap.innerHTML = ''; return; }
+  const picHtml = user.picture
+    ? `<img src="${user.picture}" alt="">`
+    : ini(user.name || 'U');
+  wrap.innerHTML = `
+    <div class="header-avatar">${picHtml}</div>
+    <span class="header-name">${(user.name||'').split(' ')[0]}</span>
+    <button class="btn-signout" onclick="signOut()">Sign out</button>`;
+}
+
+/* ════════════════════════════════════════════════════════
+   AUTH  — Google Sign-In + email fallback
+   ════════════════════════════════════════════════════════ */
+let googleUser = null;
+
+// Called by Google Identity Services after sign-in
+function handleGoogleCredential(response) {
+  try {
+    // Decode JWT payload (no signature check needed for display)
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
+    sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
+    updateHeaderUser(googleUser);
+    // Check if manager
+    if (!MANAGER_EMAIL || MANAGER_EMAIL === googleUser.email || MANAGER_EMAIL === '') {
+      sessionStorage.setItem('gjc_mgr_authed', '1');
+    }
+    renderManager();
+  } catch(e) { console.error(e); }
+}
+
+function signOut() {
+  googleUser = null;
+  sessionStorage.clear();
+  updateHeaderUser(null);
+  setRole('manager');
+}
+
+function renderManagerAuth(el) {
+  const gBtn = GOOGLE_CLIENT_ID
+    ? `<div id="g_id_onload"
+          data-client_id="${GOOGLE_CLIENT_ID}"
+          data-callback="handleGoogleCredential"
+          data-auto_prompt="false"></div>
+       <div class="g_id_signin" data-type="standard" data-theme="outline"
+          data-size="large" data-text="sign_in_with" data-shape="rectangular"
+          data-logo_alignment="left" style="width:100%;margin-bottom:10px"></div>`
+    : `<button class="google-btn" onclick="demoManagerLogin()">
+        <svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>
+        Sign in with Google
+      </button>`;
+
+  el.innerHTML = `
+    <div class="auth-overlay">
+      <div class="auth-card">
+        <div class="auth-logo">📊</div>
+        <div class="auth-title">Manager Access</div>
+        <div class="auth-sub">Sign in with your work Google account to access the Growth Journey dashboard.</div>
+        ${gBtn}
+        ${!GOOGLE_CLIENT_ID ? `
+        <div class="auth-divider">or enter email</div>
+        <input class="auth-input" id="mgr-email" type="email" placeholder="you@company.com">
+        <button class="btn-primary" style="width:100%" onclick="emailManagerLogin()">Continue</button>
+        <div class="auth-error" id="mgr-err"></div>
+        <div class="auth-hint">Demo mode — any email works. Set MANAGER_EMAIL in app.js to restrict access.</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function demoManagerLogin() {
+  googleUser = { name:'Abhinav Srivastava', email:'abhinav@company.com', picture:'' };
+  sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
+  sessionStorage.setItem('gjc_mgr_authed','1');
+  updateHeaderUser(googleUser);
+  renderManager();
+}
+
+function emailManagerLogin() {
+  const email = document.getElementById('mgr-email')?.value?.trim();
+  if (!email || !email.includes('@')) {
+    document.getElementById('mgr-err').textContent = 'Enter a valid email.'; return;
+  }
+  if (MANAGER_EMAIL && email !== MANAGER_EMAIL) {
+    document.getElementById('mgr-err').textContent = 'Not authorised as manager.'; return;
+  }
+  googleUser = { name: email.split('@')[0], email, picture:'' };
+  sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
+  sessionStorage.setItem('gjc_mgr_authed','1');
+  updateHeaderUser(googleUser);
+  renderManager();
 }
 
 /* ════════════════════════════════════════════════════════
    MANAGER VIEW
    ════════════════════════════════════════════════════════ */
-let teamChartInst   = null;
-let radarChartInst  = null;
-let selectedMemberId = null;
-let chartPeriod     = 'all';
+let teamChart  = null;
+let radarChart = null;
+let selId      = null;
+let period     = 'all';
 
 function renderManager() {
   const el = document.getElementById('view-manager');
-  if (!sessionStorage.getItem('gjc_mgr_authed')) { renderManagerPin(el); return; }
+
+  // Restore session
+  const storedUser = sessionStorage.getItem('gjc_google_user');
+  if (storedUser && !googleUser) {
+    googleUser = JSON.parse(storedUser);
+    updateHeaderUser(googleUser);
+  }
+
+  if (!sessionStorage.getItem('gjc_mgr_authed')) { renderManagerAuth(el); return; }
   initData();
-  const members = getMembers();
-  el.innerHTML = `<div class="mgr-page">
-    <div id="kpi-section"></div>
-    <div id="team-chart-section"></div>
-    <div id="team-scoring-section"></div>
-    <div id="deep-dive-section"></div>
-    <div id="pending-section"></div>
+  const mem = getMembers();
+
+  el.innerHTML = `<div class="page">
+    <div id="s-kpi"></div>
+    <div id="s-chart"></div>
+    <div id="s-reportees"></div>
+    <div id="s-dive"></div>
+    <div id="s-pending"></div>
   </div>`;
-  buildKPISection(members);
-  buildTeamChartSection(members);
-  buildTeamScoringSection(members);
-  buildPendingSection();
+
+  buildKPI(mem);
+  buildChart(mem);
+  buildReportees(mem);
+  buildPending();
 }
 
-/* ── KPI CUTS ───────────────────────────────────────────── */
-function buildKPISection(members) {
-  const scores = members.map(m => m.history[m.history.length - 1]?.overall ?? 0);
-  const teamAvg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  const high   = scores.filter(s => s >= 85).length;
-  const track  = scores.filter(s => s >= 70 && s < 85).length;
-  const needs  = scores.filter(s => s < 70).length;
-  const promo  = members.filter(isPromoCandidate).length;
+/* ── KPI ─────────────────────────────────────────────────── */
+function buildKPI(mem) {
+  const sc    = mem.map(m => m.history[m.history.length-1]?.overall ?? 0);
+  const tavg  = Math.round(sc.reduce((a,b)=>a+b,0)/sc.length);
+  const high  = sc.filter(s=>s>=85).length;
+  const track = sc.filter(s=>s>=70&&s<85).length;
+  const needs = sc.filter(s=>s<70).length;
+  const promo = mem.filter(isPromo).length;
 
-  document.getElementById('kpi-section').innerHTML = `
-    <div class="section-label">Dashboard Cuts</div>
+  document.getElementById('s-kpi').innerHTML = `
+    <div class="sec-hd"><div><div class="sec-title">Dashboard Overview</div></div></div>
     <div class="kpi-row">
-      <div class="kpi-card" style="--accent:#6366F1">
-        <div class="kpi-label">Team Average</div>
-        <div class="kpi-value">${teamAvg}<span style="font-size:16px;font-weight:500">%</span></div>
-        <div class="kpi-sub">${members.length} members tracked</div>
+      <div class="kpi-card" style="--kpi-color:#2563EB">
+        <div class="kpi-lbl">Team Average</div>
+        <div class="kpi-val">${tavg}<small style="font-size:14px;font-weight:500">%</small></div>
+        <div class="kpi-sub">${mem.length} reportees tracked</div>
       </div>
-      <div class="kpi-card" style="--accent:#10B981">
-        <div class="kpi-label">High Performers</div>
-        <div class="kpi-value">${high}</div>
+      <div class="kpi-card" style="--kpi-color:#059669">
+        <div class="kpi-lbl">High Performers</div>
+        <div class="kpi-val">${high}</div>
         <div class="kpi-sub">Score ≥ 85%</div>
-        <span class="kpi-badge" style="background:#ECFDF5;color:#065F46">${Math.round(high/members.length*100)}% of team</span>
+        <div class="kpi-pill" style="background:#D1FAE5;color:#065F46">${Math.round(high/mem.length*100)}% of team</div>
       </div>
-      <div class="kpi-card" style="--accent:#3B82F6">
-        <div class="kpi-label">On Track</div>
-        <div class="kpi-value">${track}</div>
+      <div class="kpi-card" style="--kpi-color:#2563EB">
+        <div class="kpi-lbl">On Track</div>
+        <div class="kpi-val">${track}</div>
         <div class="kpi-sub">Score 70–84%</div>
-        <span class="kpi-badge" style="background:#EFF6FF;color:#1D4ED8">${Math.round(track/members.length*100)}% of team</span>
+        <div class="kpi-pill" style="background:#DBEAFE;color:#1D4ED8">${Math.round(track/mem.length*100)}% of team</div>
       </div>
-      <div class="kpi-card" style="--accent:#F43F5E">
-        <div class="kpi-label">Needs Attention</div>
-        <div class="kpi-value">${needs}</div>
+      <div class="kpi-card" style="--kpi-color:#DC2626">
+        <div class="kpi-lbl">Needs Attention</div>
+        <div class="kpi-val">${needs}</div>
         <div class="kpi-sub">Score &lt; 70%</div>
-        ${needs ? `<span class="kpi-badge" style="background:#FFF1F2;color:#9F1239">⚠ Review needed</span>` : `<span class="kpi-badge" style="background:#ECFDF5;color:#065F46">✓ All clear</span>`}
+        ${needs ? `<div class="kpi-pill" style="background:#FEE2E2;color:#991B1B">⚠ Review needed</div>` : `<div class="kpi-pill" style="background:#D1FAE5;color:#065F46">✓ All clear</div>`}
       </div>
-      <div class="kpi-card" style="--accent:#F59E0B">
-        <div class="kpi-label">Promo Candidates</div>
-        <div class="kpi-value">${promo}</div>
-        <div class="kpi-sub">Threshold sustained 3+ cycles</div>
-        ${promo ? `<span class="kpi-badge" style="background:#FEF3C7;color:#92400E">🏆 Ready to promote</span>` : ''}
+      <div class="kpi-card" style="--kpi-color:#D97706">
+        <div class="kpi-lbl">Promo Candidates</div>
+        <div class="kpi-val">${promo}</div>
+        <div class="kpi-sub">3+ cycles at threshold</div>
+        ${promo ? `<div class="kpi-pill" style="background:#FEF3C7;color:#92400E">🏆 Promote now</div>` : ''}
       </div>
     </div>`;
 }
 
-/* ── TEAM CHART ─────────────────────────────────────────── */
-function buildTeamChartSection(members) {
+/* ── TEAM LINE CHART ─────────────────────────────────────── */
+function buildChart(mem) {
   const tabs = ['2W','1M','3M','6M','1Y','All'];
-  document.getElementById('team-chart-section').innerHTML = `
-    <div class="section-label">Team Progress</div>
+  document.getElementById('s-chart').innerHTML = `
+    <div class="sec-hd">
+      <div><div class="sec-title">Team Progress</div><div class="sec-subtitle">Score trend across all reportees</div></div>
+    </div>
     <div class="chart-card">
-      <div class="chart-header">
-        <div class="chart-title">Score Trend — All Members</div>
+      <div class="chart-hd">
+        <div>
+          <div class="chart-title">Score Timeline</div>
+        </div>
         <div class="period-tabs">
-          ${tabs.map(p => `<button class="period-tab${(chartPeriod===p.toLowerCase()||(chartPeriod==='all'&&p==='All'))?' active':''}" onclick="setTeamPeriod('${p.toLowerCase()}')">${p}</button>`).join('')}
+          ${tabs.map(p=>`<button class="period-tab${period===(p==='All'?'all':p.toLowerCase())?' active':''}" onclick="setPeriod('${p==='All'?'all':p.toLowerCase()}')">${p}</button>`).join('')}
         </div>
       </div>
       <div class="chart-wrap"><canvas id="teamChart"></canvas></div>
     </div>`;
-  drawTeamChart(members);
+  drawTeamChart(mem);
 }
 
-function setTeamPeriod(p) {
-  chartPeriod = p;
-  buildTeamChartSection(getMembers());
-}
+function setPeriod(p) { period = p; buildChart(getMembers()); }
 
-function drawTeamChart(members) {
-  if (teamChartInst) { teamChartInst.destroy(); teamChartInst = null; }
+function drawTeamChart(mem) {
+  if (teamChart) { teamChart.destroy(); teamChart = null; }
   const ctx = document.getElementById('teamChart')?.getContext('2d');
   if (!ctx) return;
 
   const cutoff = new Date();
-  if      (chartPeriod === '2w') cutoff.setDate(cutoff.getDate() - 14);
-  else if (chartPeriod === '1m') cutoff.setMonth(cutoff.getMonth() - 1);
-  else if (chartPeriod === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
-  else if (chartPeriod === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
-  else if (chartPeriod === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+  if      (period==='2w') cutoff.setDate(cutoff.getDate()-14);
+  else if (period==='1m') cutoff.setMonth(cutoff.getMonth()-1);
+  else if (period==='3m') cutoff.setMonth(cutoff.getMonth()-3);
+  else if (period==='6m') cutoff.setMonth(cutoff.getMonth()-6);
+  else if (period==='1y') cutoff.setFullYear(cutoff.getFullYear()-1);
   else cutoff.setFullYear(2000);
 
-  const datasets = members.map((m, i) => {
-    let filtered = m.history.filter(h => new Date(h.date) >= cutoff);
-    if (filtered.length < 2) filtered = m.history.slice(-4);
+  const datasets = mem.map((m, i) => {
+    let data = m.history.filter(h => new Date(h.date) >= cutoff);
+    if (data.length < 2) data = m.history.slice(-4);
     return {
       label: m.name.split(' ')[0],
-      data: filtered.map(h => ({
-        x: new Date(h.date).toLocaleDateString('en-IN', { day:'numeric', month:'short' }),
+      data: data.map(h => ({
+        x: new Date(h.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}),
         y: h.overall,
       })),
-      borderColor: m.color || AVATAR_COLORS[i % AVATAR_COLORS.length],
-      backgroundColor: (m.color || AVATAR_COLORS[i % AVATAR_COLORS.length]) + '18',
-      tension: .4, borderWidth: 2, pointRadius: 4, fill: false,
+      borderColor: m.color,
+      backgroundColor: m.color + '15',
+      tension: .35, borderWidth: 2.5,
+      pointRadius: 5, pointHoverRadius: 7,
+      pointBackgroundColor: m.color,
+      pointBorderColor: '#fff', pointBorderWidth: 2,
+      fill: false,
     };
   });
 
-  teamChartInst = new Chart(ctx, {
-    type: 'line',
-    data: { datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend: { position:'bottom', labels:{ usePointStyle:true, padding:14, font:{size:11} } },
-        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}%` } },
+  teamChart = new Chart(ctx, {
+    type:'line',
+    data:{ datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'bottom', labels:{ usePointStyle:true, pointStyle:'circle', padding:16, font:{size:11}, color:'#334155' } },
+        tooltip:{ backgroundColor:'#0F172A', padding:10, callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.y}%` } },
       },
-      scales: {
-        x: { type:'category', grid:{display:false}, ticks:{font:{size:11}} },
-        y: { min:0, max:100, grid:{color:'#F1F5F9'}, ticks:{ callback:v=>v+'%', font:{size:11} } },
+      scales:{
+        x:{ type:'category', grid:{display:false}, ticks:{ font:{size:11}, color:'#64748B' }, border:{display:false} },
+        y:{ min:0, max:100,
+            grid:{ color:'#F1F5F9', drawBorder:false },
+            ticks:{ callback:v=>v+'%', font:{size:11}, color:'#64748B', stepSize:20 },
+            border:{ display:false },
+          },
       },
     },
   });
 }
 
-/* ── TEAM SCORING TABLE ─────────────────────────────────── */
-function buildTeamScoringSection(members) {
-  const rows = members.map(m => {
-    const latest = m.history[m.history.length - 1] || {};
-    const score  = latest.overall ?? 0;
-    const [col]  = skColor(score);
-    const isPromo = isPromoCandidate(m);
+/* ── REPORTEES GRID ──────────────────────────────────────── */
+function buildReportees(mem) {
+  const cards = mem.map(m => {
+    const lat   = m.history[m.history.length-1] || {};
+    const score = lat.overall ?? 0;
+    const col   = stColor(score);
     return `
-      <tr data-id="${m.id}" onclick="selectMember('${m.id}')" ${selectedMemberId===m.id?'class="selected-row"':''}>
-        <td>
-          <div class="member-cell">
-            <div class="member-avatar-sm" style="background:${m.color}">${initials(m.name)}</div>
-            <div>
-              <div class="member-cell-name">${m.name}</div>
-              <div class="member-cell-level">${LEVEL_NAMES[m.level]}</div>
-            </div>
+      <div class="rep-card${selId===m.id?' selected':''}" id="rc-${m.id}"
+           style="--rc-color:${col}" onclick="selectMember('${m.id}')">
+        <div class="rep-top">
+          <div class="rep-av" style="background:${m.color}">${ini(m.name)}</div>
+          <div>
+            <div class="rep-name">${m.name}</div>
+            <div class="rep-role">${m.role || LEVEL_NAMES[m.level]}</div>
           </div>
-        </td>
-        <td><span class="lvl-badge">${m.level}</span></td>
-        <td>
-          <div class="score-bar-wrap">
-            <div class="score-bar-bg">
-              <div class="score-bar-fill" style="width:${score}%;background:${col}"></div>
-            </div>
-            <div class="score-num" style="color:${col}">${score}%</div>
-          </div>
-        </td>
-        <td>
-          <span class="status-chip ${statusClass(score)}">
-            <span class="dot"></span>${statusLabel(score)}
-          </span>
-          ${isPromo ? '<span class="promo-flag" style="margin-left:6px">🏆 Promo Ready</span>' : ''}
-        </td>
-        <td>${latest.date ? fmtDate(latest.date) : '—'}</td>
-        <td style="text-align:center">${m.history.length}</td>
-      </tr>`;
+        </div>
+        <div class="rep-score-row">
+          <div class="rep-score">${score}%</div>
+          <span class="lvl">${m.level}</span>
+        </div>
+        <div class="rep-bar-bg">
+          <div class="rep-bar-fill" style="width:${score}%;background:${col}"></div>
+        </div>
+        <div class="rep-status" style="margin-top:8px">
+          <span class="${stClass(score)}"><span class="chip-dot"></span>${stLabel(score)}</span>
+          ${isPromo(m)?'<div class="promo-flag">🏆 Promo Ready</div>':''}
+        </div>
+      </div>`;
   }).join('');
 
-  document.getElementById('team-scoring-section').innerHTML = `
-    <div class="section-label">Team Scoring</div>
-    <div class="team-table-wrap">
-      <div class="team-table-hd">
-        <div class="chart-title">All Members · Click any row to deep-dive ↓</div>
-      </div>
-      <table class="team-table">
-        <thead>
-          <tr>
-            <th>Member</th><th>Level</th>
-            <th style="width:240px">Score</th>
-            <th>Status</th><th>Last Snapshot</th>
-            <th style="text-align:center">Snapshots</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  document.getElementById('s-reportees').innerHTML = `
+    <div class="sec-hd">
+      <div><div class="sec-title">My Reportees</div><div class="sec-subtitle">Click a card to open individual deep-dive</div></div>
+    </div>
+    <div class="reportees-grid">${cards}</div>`;
 }
 
 function selectMember(id) {
-  selectedMemberId = id;
-  document.querySelectorAll('.team-table tbody tr').forEach(r =>
-    r.classList.toggle('selected-row', r.dataset.id === id)
-  );
+  selId = id;
+  document.querySelectorAll('.rep-card').forEach(c => c.classList.toggle('selected', c.id==='rc-'+id));
   renderDeepDive(id);
-  setTimeout(() => document.getElementById('deep-dive-section')?.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
+  setTimeout(()=>document.getElementById('s-dive')?.scrollIntoView({behavior:'smooth',block:'start'}),60);
 }
 
-/* ── DEEP-DIVE ──────────────────────────────────────────── */
+/* ── DEEP-DIVE ───────────────────────────────────────────── */
 function renderDeepDive(id) {
-  const members = getMembers();
-  const m = members.find(x => x.id === id);
+  const mem  = getMembers();
+  const m    = mem.find(x=>x.id===id);
   if (!m) return;
 
-  const latest  = m.history[m.history.length - 1] || { skills:{}, leadership:{}, note:'', comments:{} };
-  const prev    = m.history[m.history.length - 2] || null;
-  const overall = latest.overall ?? 0;
-  const w       = LEADERSHIP_WEIGHT[m.level];
-  const hasLdr  = w > 0;
+  const lat  = m.history[m.history.length-1] || {skills:{},leadership:{},note:'',comments:{}};
+  const prev = m.history[m.history.length-2] || null;
+  const w    = LDR_WEIGHT[m.level];
+  const hasL = w > 0;
 
-  const skillCards = SKILLS.map((sk, idx) => {
-    const val     = latest.skills[sk.key] ?? 50;
-    const comment = latest.comments?.[sk.key] ?? '';
-    const [col, bg] = skColor(val);
-    const ctx  = SKILL_CONTEXT[sk.key]?.[m.level] ?? '';
-    const hint = SKILL_SOLUTIONS[sk.key]?.[m.level] ?? '';
-    const slBg = `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)`;
+  /* Skill rows */
+  const skillRows = SKILLS.map((sk,idx)=>{
+    const val  = lat.skills[sk.key] ?? 50;
+    const cmt  = lat.comments?.[sk.key] ?? '';
+    const [c,bg] = skColors(val);
+    const slBg = `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)`;
+    const ctx  = SK_CTX[sk.key]?.[m.level] ?? '';
+    const hint = SK_SOL[sk.key]?.[m.level] ?? '';
     return `
-      <div class="skill-card" id="sc-${sk.key}"
-           style="--sk-color:${col};--sk-bg:${bg};--slider-bg:${slBg}">
-        <div class="skill-card-top">
-          <div class="skill-card-name">${sk.label}</div>
-          <div class="skill-score-badge" id="badge-${sk.key}">${val}%</div>
-        </div>
-        <div class="skill-context">${ctx}</div>
-        <div class="skill-slider-wrap">
-          <input type="range" class="skill-slider" min="0" max="100" value="${val}"
-            data-key="${sk.key}" data-idx="${idx}" data-type="skill"
-            oninput="syncSlider(this,'${id}')"
-            style="--sk-color:${col};--slider-bg:${slBg}">
-        </div>
-        <button class="comment-toggle-btn" onclick="toggleComment('cbox-${sk.key}',this)">
-          <span class="toggle-icon">${comment ? '✏️' : '💬'}</span>
-          <span>${comment ? 'Edit Comment' : 'Add Comment'}</span>
-        </button>
-        <div class="comment-box${comment ? ' open' : ''}" id="cbox-${sk.key}">
-          <textarea data-key="${sk.key}" data-type="comment"
-            placeholder="${hint}">${comment}</textarea>
-          <div class="comment-hint">Suggested action: ${hint}</div>
-        </div>
-      </div>`;
-  }).join('');
-
-  const ldrCards = LEADERSHIP.map(lk => {
-    const val     = latest.leadership?.[lk.key] ?? 0;
-    const comment = latest.comments?.['ldr_' + lk.key] ?? '';
-    const [col, bg] = skColor(val || 50);
-    const ctx  = LEADERSHIP_CONTEXT[lk.key]?.[m.level] ?? 'N/A';
-    const hint = LEADERSHIP_SOLUTIONS[lk.key]?.[m.level] ?? '';
-    const slBg = hasLdr ? `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)` : '#E2E8F0';
-    return `
-      <div class="skill-card${hasLdr ? '' : ' disabled'}" id="sc-ldr-${lk.key}"
-           style="--sk-color:${col};--sk-bg:${bg};--slider-bg:${slBg}">
-        <div class="skill-card-top">
-          <div class="skill-card-name">${lk.label}</div>
-          <div class="skill-score-badge" id="badge-ldr-${lk.key}">${hasLdr ? val + '%' : 'N/A'}</div>
-        </div>
-        <div class="skill-context">${ctx}</div>
-        ${hasLdr ? `
-        <div class="skill-slider-wrap">
-          <input type="range" class="skill-slider" min="0" max="100" value="${val}"
-            data-key="${lk.key}" data-idx="0" data-type="leadership"
-            oninput="syncSlider(this,'${id}')"
-            style="--sk-color:${col};--slider-bg:${slBg}">
-        </div>
-        <button class="comment-toggle-btn" onclick="toggleComment('cbox-ldr-${lk.key}',this)">
-          <span class="toggle-icon">${comment ? '✏️' : '💬'}</span>
-          <span>${comment ? 'Edit Comment' : 'Add Comment'}</span>
-        </button>
-        <div class="comment-box${comment ? ' open' : ''}" id="cbox-ldr-${lk.key}">
-          <textarea data-key="ldr_${lk.key}" data-type="comment"
-            placeholder="${hint}">${comment}</textarea>
-          <div class="comment-hint">Suggested action: ${hint}</div>
-        </div>` : ''}
-      </div>`;
-  }).join('');
-
-  // dev plan
-  const weakSkills = SKILLS.filter(sk => (latest.skills[sk.key] ?? 50) < 65);
-  const devPlan = weakSkills.length ? `
-    <div class="devplan-card">
-      <div class="devplan-title">📋 Development Focus Areas</div>
-      ${weakSkills.map(sk => `
-        <div class="devplan-item">
-          <strong>${sk.label}</strong>
-          <span>${SKILL_SOLUTIONS[sk.key]?.[m.level] ?? ''}</span>
-        </div>`).join('')}
-    </div>` : '';
-
-  const radarCurrent = SKILLS.map(sk => latest.skills[sk.key] ?? 50);
-  const radarPrev    = prev ? SKILLS.map(sk => prev.skills[sk.key] ?? 50) : null;
-
-  document.getElementById('deep-dive-section').innerHTML = `
-    <div class="section-label">Individual Deep-Dive</div>
-    <div class="deep-dive">
-      <!-- Header -->
-      <div class="deep-dive-hd">
-        <div class="dive-member">
-          <div class="dive-avatar" style="background:${m.color}">${initials(m.name)}</div>
-          <div>
-            <div class="dive-name">${m.name}</div>
-            <div class="dive-meta">${LEVEL_NAMES[m.level]} · ${m.level} · ${m.history.length} snapshot${m.history.length!==1?'s':''}</div>
+      <div class="sk-row">
+        <div class="sk-name">${sk.label}<small>${ctx}</small></div>
+        <div class="sk-mid">
+          <div class="sk-slider-row">
+            <span class="sk-score-badge" id="bd-${sk.key}" style="--sb-col:${c};--sb-bg:${bg}">${val}%</span>
+            <input type="range" class="sk-slider" min="0" max="100" value="${val}"
+              id="sl-${sk.key}" data-key="${sk.key}" data-type="skill" data-idx="${idx}"
+              oninput="syncSlider(this,'${id}')"
+              style="--sl-bg:${slBg};--sb-col:${c}">
+          </div>
+          <button class="comment-btn${cmt?' has-comment':''}" id="cb-${sk.key}"
+            onclick="toggleCmt('cbox-${sk.key}','cb-${sk.key}')">
+            <span class="cbtn-icon">${cmt?'✏️':'💬'}</span>
+            <span id="cbt-${sk.key}">${cmt?'Edit coaching note':'Add coaching note'}</span>
+          </button>
+          <div class="comment-box${cmt?' open':''}" id="cbox-${sk.key}">
+            <textarea data-key="${sk.key}" data-type="comment"
+              placeholder="${hint}">${cmt}</textarea>
+            <div class="comment-hint-text">Suggested action: ${hint}</div>
           </div>
         </div>
-        <div class="dive-overall">
-          <div class="dive-score" id="dive-score">${overall}%</div>
-          <div class="dive-score-label" id="dive-score-lbl">${statusLabel(overall)}</div>
+      </div>`;
+  }).join('');
+
+  /* Leadership rows */
+  const ldrRows = LEADERSHIP.map((lk)=>{
+    const val  = lat.leadership?.[lk.key] ?? 0;
+    const cmt  = lat.comments?.['ldr_'+lk.key] ?? '';
+    const [c,bg] = skColors(val||50);
+    const slBg = hasL ? `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)` : '#E2E8F0';
+    const ctx  = LDR_CTX[lk.key]?.[m.level] ?? 'N/A at this level';
+    const hint = LDR_SOL[lk.key]?.[m.level] ?? '';
+    return `
+      <div class="sk-row${hasL?'':' disabled'}">
+        <div class="sk-name">${lk.label}<small>${ctx}</small></div>
+        <div class="sk-mid">
+          <div class="sk-slider-row">
+            <span class="sk-score-badge" id="bd-ldr-${lk.key}" style="--sb-col:${c};--sb-bg:${bg}">${hasL?val+'%':'N/A'}</span>
+            ${hasL?`
+            <input type="range" class="sk-slider" min="0" max="100" value="${val}"
+              id="sl-ldr-${lk.key}" data-key="${lk.key}" data-type="leadership"
+              oninput="syncSlider(this,'${id}')"
+              style="--sl-bg:${slBg};--sb-col:${c}">` : `<div style="flex:1;height:5px;background:#E2E8F0;border-radius:99px"></div>`}
+          </div>
+          ${hasL?`
+          <button class="comment-btn${cmt?' has-comment':''}" id="cb-ldr-${lk.key}"
+            onclick="toggleCmt('cbox-ldr-${lk.key}','cb-ldr-${lk.key}')">
+            <span class="cbtn-icon">${cmt?'✏️':'💬'}</span>
+            <span id="cbt-ldr-${lk.key}">${cmt?'Edit coaching note':'Add coaching note'}</span>
+          </button>
+          <div class="comment-box${cmt?' open':''}" id="cbox-ldr-${lk.key}">
+            <textarea data-key="ldr_${lk.key}" data-type="comment"
+              placeholder="${hint}">${cmt}</textarea>
+            <div class="comment-hint-text">Suggested action: ${hint}</div>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  /* Dev plan */
+  const weak = SKILLS.filter(sk=>(lat.skills[sk.key]??50)<65);
+  const devPlan = weak.length ? `
+    <div class="devplan">
+      <div class="devplan-title">📋 Development Focus — ${weak.length} skill${weak.length>1?'s':''} below 65%</div>
+      ${weak.map(sk=>`<div class="devplan-item"><b>${sk.label}</b><span>${SK_SOL[sk.key]?.[m.level]??''}</span></div>`).join('')}
+    </div>` : '';
+
+  const radCur = SKILLS.map(sk=>lat.skills[sk.key]??50);
+  const radPrv = prev ? SKILLS.map(sk=>prev.skills[sk.key]??50) : null;
+
+  document.getElementById('s-dive').innerHTML = `
+    <div class="sec-hd">
+      <div><div class="sec-title">Individual Deep-Dive</div></div>
+      <button class="btn-ghost btn-sm" onclick="closeDeepDive()">✕ Close</button>
+    </div>
+    <div class="deep-dive">
+      <!-- Header -->
+      <div class="dd-hd">
+        <div class="dd-member">
+          <div class="dd-av" style="background:${m.color}">${ini(m.name)}</div>
+          <div>
+            <div class="dd-name">${m.name}</div>
+            <div class="dd-meta">${LEVEL_NAMES[m.level]} · ${m.level} · ${m.history.length} snapshot${m.history.length!==1?'s':''} · ${m.role||''}</div>
+          </div>
+        </div>
+        <div class="dd-score-wrap">
+          <div class="dd-score" id="dd-score">${lat.overall??0}%</div>
+          <div class="dd-score-lbl" id="dd-score-lbl">${stLabel(lat.overall??0)}</div>
         </div>
       </div>
 
-      <div class="deep-dive-body">
+      <div class="dd-body">
         <!-- Journey -->
         <div>
-          <div class="section-label" style="margin-bottom:10px">Growth Journey</div>
-          ${buildJourneyMap(m)}
+          <div class="sec-title" style="margin-bottom:10px">Growth Journey</div>
+          ${buildJmap(m)}
         </div>
 
-        <!-- Radar + skills -->
-        <div class="dive-grid">
-          <div class="radar-card">
-            <div class="radar-card-title">Skills Web</div>
-            <div class="radar-wrap"><canvas id="radarChart"></canvas></div>
-            <div class="radar-legend">
-              <div class="radar-legend-item"><div class="radar-legend-dot" style="background:#6366F1"></div>Current</div>
-              ${radarPrev ? '<div class="radar-legend-item"><div class="radar-legend-dot" style="background:#CBD5E1"></div>Previous</div>' : ''}
+        <!-- Radar + Skills -->
+        <div class="dd-grid">
+          <!-- Radar -->
+          <div class="radar-panel">
+            <div class="radar-panel-title">Skills Web</div>
+            <div class="radar-canvas-wrap"><canvas id="radarChart"></canvas></div>
+            <div class="radar-leg">
+              <div class="radar-leg-item"><div class="radar-leg-dot" style="background:#2563EB"></div>Current</div>
+              ${radPrv?'<div class="radar-leg-item"><div class="radar-leg-dot" style="background:#CBD5E1"></div>Previous</div>':''}
             </div>
           </div>
 
-          <div class="skills-section">
-            <div class="skill-section-label">Core Skills</div>
-            <div class="skill-cards-grid">${skillCards}</div>
+          <!-- Skills col -->
+          <div class="skills-col">
+            <div class="sk-sec-title">Core Skills (9)</div>
+            ${skillRows}
 
             <div class="ldr-banner">
-              🎯 <strong>Leadership Weight: ${Math.round(w * 100)}%</strong> of overall score
-              ${!hasLdr ? '— unlocks from Senior Associate (SA) onwards' : ''}
+              🎯 <strong>Leadership weight: ${Math.round(w*100)}%</strong>
+              &nbsp;of overall score
+              ${!hasL?'— unlocks from Senior Associate (SA)':''}
             </div>
 
-            ${hasLdr ? `
-            <div class="skill-section-label">Leadership Competencies</div>
-            <div class="skill-cards-grid">${ldrCards}</div>` : ''}
+            ${hasL?`<div class="sk-sec-title">Leadership Competencies (6)</div>${ldrRows}`:''}
           </div>
         </div>
 
         ${devPlan}
 
-        <!-- Manager note & save -->
+        <!-- Save -->
         <div class="save-row">
-          <label>Manager Note (saved with snapshot)</label>
-          <textarea id="mgr-note" placeholder="Coaching notes, context, next steps…">${latest.note || ''}</textarea>
+          <label>Manager Note (optional — saved with snapshot)</label>
+          <textarea id="mgr-note" placeholder="Coaching observations, context, agreed next steps…">${lat.note||''}</textarea>
           <div class="save-actions">
-            <button class="btn-ghost" onclick="document.getElementById('deep-dive-section').innerHTML=''">Close</button>
+            <span style="font-size:11px;color:var(--subtle)">Last snapshot: ${lat.date?fmt(lat.date):'—'}</span>
+            <button class="btn-ghost" onclick="closeDeepDive()">Cancel</button>
             <button class="btn-primary" onclick="saveSnapshot('${id}')">💾 Save Snapshot</button>
           </div>
         </div>
       </div>
     </div>`;
 
-  drawRadar(radarCurrent, radarPrev);
+  drawRadar(radCur, radPrv);
 }
 
-/* ── JOURNEY MAP ────────────────────────────────────────── */
-function buildJourneyMap(member) {
-  const idx = LEVELS.indexOf(member.level);
-  return `<div class="jmap">` + LEVELS.map((lv, i) => {
-    let cls = '';
-    if (i < idx) cls = 'done';
-    else if (i === idx) cls = 'current';
-    else if (i === idx + 1) cls = 'next-step';
-    else if (i === idx + 2) cls = 'goal';
-    const tag = i === idx ? '<br><span style="font-size:9px;color:#6366F1;font-weight:700">YOU</span>' :
-                i === idx+1 ? '<br><span style="font-size:9px;color:#F59E0B;font-weight:700">NEXT</span>' :
-                i === idx+2 ? '<br><span style="font-size:9px;color:#10B981;font-weight:700">GOAL</span>' : '';
-    return `
-      ${i > 0 ? `<div class="jm-connector${i <= idx ? ' done' : ''}"></div>` : ''}
+function closeDeepDive() {
+  selId = null;
+  document.getElementById('s-dive').innerHTML = '';
+  document.querySelectorAll('.rep-card').forEach(c=>c.classList.remove('selected'));
+}
+
+/* ── JOURNEY MAP ─────────────────────────────────────────── */
+function buildJmap(m) {
+  const idx = LEVELS.indexOf(m.level);
+  return `<div class="jmap">` + LEVELS.map((lv,i)=>{
+    const cls = i<idx?'done':i===idx?'current':i===idx+1?'next':i===idx+2?'goal':'';
+    const tag = i===idx?'<br><span style="font-size:8px;font-weight:700;color:#2563EB">YOU</span>':
+                i===idx+1?'<br><span style="font-size:8px;font-weight:700;color:#D97706">NEXT</span>':
+                i===idx+2?'<br><span style="font-size:8px;font-weight:700;color:#059669">GOAL</span>':'';
+    return `${i>0?`<div class="jm-conn${i<=idx?' done':''}"></div>`:''}
       <div class="jm-node ${cls}">
         <div class="jm-circle">${lv}</div>
-        <div class="jm-label">${lv}${tag}</div>
+        <div class="jm-lbl">${lv}${tag}</div>
       </div>`;
   }).join('') + `</div>`;
 }
 
-/* ── SLIDER SYNC ────────────────────────────────────────── */
+/* ── SLIDER SYNC ─────────────────────────────────────────── */
 function syncSlider(el, memberId) {
-  const val  = parseInt(el.value);
+  const val  = +el.value;
   const key  = el.dataset.key;
   const type = el.dataset.type;
-  const [col, bg] = skColor(val);
-  const slBg = `linear-gradient(to right,${col} ${val}%,#E2E8F0 ${val}%)`;
+  const [c, bg] = skColors(val);
+  const slBg = `linear-gradient(to right,${c} ${val}%,#E2E8F0 ${val}%)`;
 
-  el.style.setProperty('--slider-bg', slBg);
-  el.style.setProperty('--sk-color', col);
+  el.style.setProperty('--sl-bg', slBg);
+  el.style.setProperty('--sb-col', c);
 
-  const badgeId = type === 'leadership' ? `badge-ldr-${key}` : `badge-${key}`;
-  const badge = document.getElementById(badgeId);
-  if (badge) { badge.textContent = val + '%'; badge.style.background = bg; badge.style.color = col; }
+  const bdId = type==='leadership' ? `bd-ldr-${key}` : `bd-${key}`;
+  const bd = document.getElementById(bdId);
+  if (bd) { bd.textContent=val+'%'; bd.style.setProperty('--sb-col',c); bd.style.setProperty('--sb-bg',bg); }
 
-  const cardId = type === 'leadership' ? `sc-ldr-${key}` : `sc-${key}`;
-  const card = document.getElementById(cardId);
-  if (card) { card.style.setProperty('--sk-color', col); card.style.borderLeftColor = col; }
-
-  // live radar update (skills only)
-  if (radarChartInst && type === 'skill') {
-    const idx = SKILLS.findIndex(s => s.key === key);
-    if (idx >= 0) { radarChartInst.data.datasets[0].data[idx] = val; radarChartInst.update('none'); }
+  // live radar update
+  if (radarChart && type==='skill') {
+    const idx = +el.dataset.idx;
+    if (idx>=0) { radarChart.data.datasets[0].data[idx]=val; radarChart.update('none'); }
   }
 
   recomputeOverall(memberId);
 }
 
 function recomputeOverall(memberId) {
-  const members = getMembers();
-  const m = members.find(x => x.id === memberId);
+  const m = getMembers().find(x=>x.id===memberId);
   if (!m) return;
-  const skills = {};
-  SKILLS.forEach(sk => {
-    const el = document.querySelector(`input[data-key="${sk.key}"][data-type="skill"]`);
-    skills[sk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.skills[sk.key] ?? 50);
+  const s={}, l={};
+  SKILLS.forEach(sk=>{
+    const el=document.getElementById(`sl-${sk.key}`);
+    s[sk.key]=el?+el.value:(m.history[m.history.length-1]?.skills[sk.key]??50);
   });
-  const leadership = {};
-  LEADERSHIP.forEach(lk => {
-    const el = document.querySelector(`input[data-key="${lk.key}"][data-type="leadership"]`);
-    leadership[lk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.leadership[lk.key] ?? 0);
+  LEADERSHIP.forEach(lk=>{
+    const el=document.getElementById(`sl-ldr-${lk.key}`);
+    l[lk.key]=el?+el.value:(m.history[m.history.length-1]?.leadership[lk.key]??0);
   });
-  const o = calcOverall(skills, leadership, m.level);
-  const scoreEl = document.getElementById('dive-score');
-  const lblEl   = document.getElementById('dive-score-lbl');
-  if (scoreEl) scoreEl.textContent = o + '%';
-  if (lblEl)   lblEl.textContent   = statusLabel(o);
+  const o=calcOverall(s,l,m.level);
+  const se=document.getElementById('dd-score');
+  const le=document.getElementById('dd-score-lbl');
+  if(se) se.textContent=o+'%';
+  if(le) le.textContent=stLabel(o);
 }
 
-/* ── TOGGLE COMMENT BOX ─────────────────────────────────── */
-function toggleComment(boxId, btn) {
+/* ── COMMENT TOGGLE ──────────────────────────────────────── */
+function toggleCmt(boxId, btnId) {
   const box = document.getElementById(boxId);
+  const btn = document.getElementById(btnId);
   if (!box) return;
   const open = box.classList.toggle('open');
-  const icon = btn.querySelector('.toggle-icon');
-  const lbl  = btn.querySelector('span:last-child');
-  if (icon) icon.textContent = open ? '✏️' : '💬';
-  if (lbl)  lbl.textContent  = open ? 'Hide Comment' : (lbl.textContent.includes('Edit') ? 'Edit Comment' : 'Add Comment');
+  if (btn) btn.classList.toggle('has-comment', open || (box.querySelector('textarea')?.value?.trim()?.length>0));
+  const lbl = document.getElementById(btnId.replace('cb-','cbt-'));
+  if (lbl) lbl.textContent = open ? 'Hide note' : (box.querySelector('textarea')?.value?.trim() ? 'Edit coaching note' : 'Add coaching note');
 }
 
 /* ── SAVE SNAPSHOT ──────────────────────────────────────── */
 function saveSnapshot(id) {
-  const members = getMembers();
-  const m = members.find(x => x.id === id);
+  const mem = getMembers();
+  const m   = mem.find(x=>x.id===id);
   if (!m) return;
 
-  const skills = {};
-  SKILLS.forEach(sk => {
-    const el = document.querySelector(`input[data-key="${sk.key}"][data-type="skill"]`);
-    skills[sk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.skills[sk.key] ?? 50);
+  const s={}, l={}, comments={};
+  SKILLS.forEach(sk=>{
+    const el=document.getElementById(`sl-${sk.key}`);
+    s[sk.key]=el?+el.value:(m.history[m.history.length-1]?.skills[sk.key]??50);
   });
-  const leadership = {};
-  LEADERSHIP.forEach(lk => {
-    const el = document.querySelector(`input[data-key="${lk.key}"][data-type="leadership"]`);
-    leadership[lk.key] = el ? parseInt(el.value) : (m.history[m.history.length-1]?.leadership[lk.key] ?? 0);
+  LEADERSHIP.forEach(lk=>{
+    const el=document.getElementById(`sl-ldr-${lk.key}`);
+    l[lk.key]=el?+el.value:(m.history[m.history.length-1]?.leadership[lk.key]??0);
   });
-
-  // Collect comments
-  const comments = {};
-  document.querySelectorAll('.comment-box textarea').forEach(ta => {
-    if (ta.dataset.key) comments[ta.dataset.key] = ta.value.trim();
+  document.querySelectorAll('.comment-box textarea').forEach(ta=>{
+    if(ta.dataset.key) comments[ta.dataset.key]=ta.value.trim();
   });
 
-  // Validate: weak skills (< 45) must have comment
-  const weakNoComment = SKILLS.filter(sk => (skills[sk.key] ?? 50) < 45 && !comments[sk.key]);
-  if (weakNoComment.length) {
-    toast(`⚠ Add a comment for: ${weakNoComment.map(s => s.label).join(', ')}`);
-    weakNoComment.forEach(sk => document.getElementById(`cbox-${sk.key}`)?.classList.add('open'));
+  // Validate weak skills need a comment
+  const noComment = SKILLS.filter(sk=>(s[sk.key]??50)<45 && !comments[sk.key]);
+  if (noComment.length) {
+    toast(`⚠ Add a coaching note for: ${noComment.map(x=>x.label).join(', ')}`);
+    noComment.forEach(sk=>document.getElementById(`cbox-${sk.key}`)?.classList.add('open'));
     return;
   }
 
-  const note    = document.getElementById('mgr-note')?.value?.trim() ?? '';
-  const overall = calcOverall(skills, leadership, m.level);
-  m.history.push({ date: new Date().toISOString(), skills, leadership, note, comments, overall });
-  saveMembers(members);
+  const note=document.getElementById('mgr-note')?.value?.trim()||'';
+  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note, comments, overall:calcOverall(s,l,m.level) });
+  saveMembers(mem);
   toast('✅ Snapshot saved!');
-
-  const updatedMembers = getMembers();
-  buildKPISection(updatedMembers);
-  buildTeamChartSection(updatedMembers);
-  buildTeamScoringSection(updatedMembers);
-  renderDeepDive(id);
+  const upd=getMembers();
+  buildKPI(upd); buildChart(upd); buildReportees(upd); renderDeepDive(id);
 }
 
-/* ── RADAR ──────────────────────────────────────────────── */
+/* ── RADAR ───────────────────────────────────────────────── */
 function drawRadar(current, prev) {
-  if (radarChartInst) { radarChartInst.destroy(); radarChartInst = null; }
-  const ctx = document.getElementById('radarChart')?.getContext('2d');
+  if (radarChart) { radarChart.destroy(); radarChart=null; }
+  const ctx=document.getElementById('radarChart')?.getContext('2d');
   if (!ctx) return;
-  const datasets = [{
-    label: 'Current', data: current,
-    backgroundColor: 'rgba(99,102,241,.15)',
-    borderColor: '#6366F1', borderWidth: 2,
-    pointBackgroundColor: '#6366F1', pointRadius: 4,
+  const ds=[{
+    label:'Current', data:current,
+    backgroundColor:'rgba(37,99,235,.12)',
+    borderColor:'#2563EB', borderWidth:2,
+    pointBackgroundColor:'#2563EB', pointRadius:4,
   }];
-  if (prev) {
-    datasets.push({
-      label: 'Previous', data: prev,
-      backgroundColor: 'rgba(203,213,225,.08)',
-      borderColor: '#CBD5E1', borderWidth: 1.5,
-      pointBackgroundColor: '#CBD5E1', pointRadius: 3,
-      borderDash: [4, 3],
-    });
-  }
-  radarChartInst = new Chart(ctx, {
-    type: 'radar',
-    data: { labels: SKILLS.map(s => s.label.split(' ')[0]), datasets },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        r: {
-          min: 0, max: 100,
-          ticks: { stepSize: 25, font:{size:10}, backdropColor:'transparent', color:'#94A3B8' },
-          grid: { color:'#E2E8F0' },
-          angleLines: { color:'#E2E8F0' },
-          pointLabels: { font:{size:10}, color:'#475569' },
-        },
-      },
+  if (prev) ds.push({
+    label:'Previous', data:prev,
+    backgroundColor:'rgba(203,213,225,.07)',
+    borderColor:'#CBD5E1', borderWidth:1.5,
+    pointBackgroundColor:'#CBD5E1', pointRadius:3,
+    borderDash:[4,3],
+  });
+  radarChart=new Chart(ctx,{
+    type:'radar',
+    data:{ labels:SKILLS.map(s=>s.label.split(' ')[0]), datasets:ds },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false} },
+      scales:{ r:{
+        min:0,max:100,
+        ticks:{stepSize:25,font:{size:9},backdropColor:'transparent',color:'#94A3B8'},
+        grid:{color:'#E2E8F0'},
+        angleLines:{color:'#E2E8F0'},
+        pointLabels:{font:{size:9.5},color:'#475569'},
+      }},
     },
   });
 }
 
-/* ── PENDING SECTION ────────────────────────────────────── */
-function buildPendingSection() {
-  const pending = getPending();
-  const members = getMembers();
-  const nameMap = Object.fromEntries(members.map(m => [m.id, m.name]));
+/* ── PENDING ─────────────────────────────────────────────── */
+function buildPending() {
+  const p   = getPending();
+  const mem = getMembers();
+  const nm  = Object.fromEntries(mem.map(m=>[m.id,m.name]));
 
-  const items = pending.length ? pending.map(p => `
+  const items = p.length ? p.map(i=>`
     <div class="pending-item">
-      <div class="pending-type-icon">${p.type === 'achievement' ? '🏅' : '💬'}</div>
-      <div class="pending-content">
-        <div class="pending-who">${nameMap[p.target] || p.target} · ${p.type === 'achievement' ? p.category : 'Peer Feedback from ' + (nameMap[p.from] || p.from)}</div>
-        <div class="pending-text">${p.text}</div>
-        <div class="pending-meta">${fmtDate(p.date)}</div>
+      <div class="p-icon">${i.type==='achievement'?'🏅':'💬'}</div>
+      <div class="p-content">
+        <div class="p-who">${nm[i.target]||i.target} · ${i.type==='achievement'?i.category:'Peer feedback from '+(nm[i.from]||i.from)}</div>
+        <div class="p-text">${i.text}</div>
+        <div class="p-meta">${fmt(i.date)}</div>
       </div>
-      <div class="pending-actions">
-        <button class="btn-approve" onclick="approveItem('${p.id}')">Approve</button>
-        <button class="btn-remove"  onclick="removeItem('${p.id}')">Remove</button>
+      <div class="p-actions">
+        <button class="btn-sm btn-approve" onclick="approveItem('${i.id}')">Approve</button>
+        <button class="btn-sm btn-remove"  onclick="removeItem('${i.id}')">Remove</button>
       </div>
-    </div>`).join('') : `<div class="empty-state"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>`;
+    </div>`).join('')
+    : `<div class="empty"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>`;
 
-  document.getElementById('pending-section').innerHTML = `
-    <div class="section-label">Pending Approvals</div>
-    <div class="pending-section">
-      <div class="pending-hd">
-        <div class="pending-hd-title">Approval Queue</div>
-        ${pending.length ? `<span class="badge-count">${pending.length}</span>` : ''}
-      </div>
-      <div class="pending-list">${items}</div>
+  document.getElementById('s-pending').innerHTML = `
+    <div class="sec-hd"><div class="sec-title">Pending Approvals</div>${p.length?`<span class="badge-cnt">${p.length}</span>`:''}</div>
+    <div class="pending-wrap">
+      <div class="pending-hd">Approval Queue ${p.length?`<span class="badge-cnt">${p.length}</span>`:''}</div>
+      <div>${items}</div>
     </div>`;
 }
 
 function approveItem(pid) {
-  let pending = getPending();
-  const item = pending.find(p => p.id === pid);
-  if (!item) return;
-  savePending(pending.filter(p => p.id !== pid));
-  const approved = getApproved();
-  approved.push({ ...item, approvedDate: new Date().toISOString() });
-  saveApproved(approved);
-  buildPendingSection();
-  toast('✅ Approved!');
+  let p=getPending(); const item=p.find(x=>x.id===pid); if(!item) return;
+  savePending(p.filter(x=>x.id!==pid));
+  saveApproved([...getApproved(),{...item,approvedDate:new Date().toISOString()}]);
+  buildPending(); toast('✅ Approved!');
 }
-function removeItem(pid) {
-  savePending(getPending().filter(p => p.id !== pid));
-  buildPendingSection();
-  toast('🗑 Removed');
-}
-
-/* ── MANAGER PIN ────────────────────────────────────────── */
-function renderManagerPin(el) {
-  el.innerHTML = `
-    <div class="pin-overlay">
-      <div class="pin-card">
-        <div class="pin-icon">🔐</div>
-        <h2>Manager Access</h2>
-        <p>Enter your 4-digit PIN to continue</p>
-        <div class="pin-dots" id="mgr-dots">
-          ${[0,1,2,3].map(() => '<div class="pin-dot"></div>').join('')}
-        </div>
-        <div class="pin-keypad">
-          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="pin-key" onclick="mgrKey(${n})">${n}</button>`).join('')}
-          <button class="pin-key wide" onclick="mgrKey(0)">0</button>
-          <button class="pin-key" onclick="mgrBack()">⌫</button>
-        </div>
-        <div class="pin-error" id="mgr-pin-err"></div>
-        <div style="margin-top:14px;font-size:11px;color:var(--subtle)">Default PIN: 1234</div>
-      </div>
-    </div>`;
-  window._mgrPin = '';
-}
-function mgrKey(n) {
-  if ((window._mgrPin || '').length >= 4) return;
-  window._mgrPin = (window._mgrPin || '') + n;
-  updatePinDots('mgr-dots', window._mgrPin.length);
-  if (window._mgrPin.length === 4) checkMgrPin();
-}
-function mgrBack() {
-  window._mgrPin = (window._mgrPin || '').slice(0, -1);
-  updatePinDots('mgr-dots', window._mgrPin.length);
-}
-function updatePinDots(id, count) {
-  document.querySelectorAll(`#${id} .pin-dot`).forEach((d, i) => d.classList.toggle('filled', i < count));
-}
-function checkMgrPin() {
-  const stored = load('gjc_mgr_pin', '1234');
-  if (window._mgrPin === stored) {
-    sessionStorage.setItem('gjc_mgr_authed', '1');
-    renderManager();
-  } else {
-    const errEl = document.getElementById('mgr-pin-err');
-    if (errEl) errEl.textContent = 'Incorrect PIN — try again';
-    setTimeout(() => {
-      window._mgrPin = '';
-      updatePinDots('mgr-dots', 0);
-      if (errEl) errEl.textContent = '';
-    }, 1200);
-  }
-}
+function removeItem(pid) { savePending(getPending().filter(x=>x.id!==pid)); buildPending(); toast('🗑 Removed'); }
 
 /* ════════════════════════════════════════════════════════
    MEMBER VIEW
    ════════════════════════════════════════════════════════ */
 function renderMember() {
   const el = document.getElementById('view-member');
-  const authedId = sessionStorage.getItem('gjc_mbr_authed');
-  if (!authedId) { renderMemberSelect(el); return; }
-  const members = getMembers();
-  const m = members.find(x => x.id === authedId);
-  if (!m) { sessionStorage.removeItem('gjc_mbr_authed'); renderMemberSelect(el); return; }
-  renderMemberDashboard(el, m);
+  const aid = sessionStorage.getItem('gjc_mbr_authed');
+  if (!aid) { renderMbrSelect(el); return; }
+  const mem = getMembers();
+  const m = mem.find(x=>x.id===aid);
+  if (!m) { sessionStorage.removeItem('gjc_mbr_authed'); renderMbrSelect(el); return; }
+  renderMbrDash(el, m);
 }
 
-function renderMemberSelect(el) {
-  const members = getMembers();
+function renderMbrSelect(el) {
+  const mem = getMembers();
   el.innerHTML = `
-    <div class="member-select-overlay">
-      <div class="member-select-card">
-        <h2>My Journey</h2>
-        <p>Select your name to sign in</p>
-        <div class="member-pick-grid">
-          ${members.map(m => `
-            <button class="member-pick-btn" onclick="startMemberLogin('${m.id}')">
-              <div class="member-avatar-sm" style="background:${m.color}">${initials(m.name)}</div>
+    <div class="auth-overlay">
+      <div class="auth-card" style="width:400px">
+        <div class="auth-logo">🙋</div>
+        <div class="auth-title">My Journey</div>
+        <div class="auth-sub">Select your name to sign in</div>
+        <div class="member-pick-list">
+          ${mem.map(m=>`
+            <button class="member-pick-btn" onclick="startMbrLogin('${m.id}')">
+              <div class="mbr-av-sm" style="background:${m.color}">${ini(m.name)}</div>
               <div>
-                <div style="font-weight:600">${m.name}</div>
-                <div style="font-size:11px;color:var(--muted)">${m.level} · ${LEVEL_NAMES[m.level]}</div>
+                <div class="mpb-name">${m.name}</div>
+                <div class="mpb-sub">${m.level} · ${LEVEL_NAMES[m.level]}</div>
               </div>
             </button>`).join('')}
         </div>
@@ -873,121 +878,105 @@ function renderMemberSelect(el) {
     </div>`;
 }
 
-function startMemberLogin(id) {
+function startMbrLogin(id) {
   const el = document.getElementById('view-member');
+  const mem = getMembers();
+  const m = mem.find(x=>x.id===id);
   el.innerHTML = `
-    <div class="pin-overlay">
-      <div class="pin-card">
-        <div class="pin-icon">🔑</div>
-        <h2>Enter PIN</h2>
-        <p>Your personal 4-digit PIN</p>
-        <div class="pin-dots" id="mbr-dots">
-          ${[0,1,2,3].map(() => '<div class="pin-dot"></div>').join('')}
-        </div>
-        <div class="pin-keypad">
-          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="pin-key" onclick="mbrKey(${n},'${id}')">${n}</button>`).join('')}
-          <button class="pin-key wide" onclick="mbrKey(0,'${id}')">0</button>
-          <button class="pin-key" onclick="mbrBack()">⌫</button>
-        </div>
-        <div class="pin-error" id="mbr-pin-err"></div>
-        <div style="margin-top:10px;font-size:11px;color:var(--subtle)">Default PIN: 0000</div>
-        <button onclick="renderMemberSelect(document.getElementById('view-member'))"
-          style="margin-top:12px;font-size:12px;color:var(--muted);background:none;text-decoration:underline;border:none;cursor:pointer">
-          ← Back to member list
+    <div class="auth-overlay">
+      <div class="auth-card">
+        <div class="auth-logo">🔑</div>
+        <div class="auth-title">${m?.name.split(' ')[0]||''}</div>
+        <div class="auth-sub">Sign in with your work Google account</div>
+        <button class="google-btn" onclick="demoMbrLogin('${id}')">
+          <svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 37c-11 0-21 8-21 21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>
+          Sign in with Google
+        </button>
+        <div class="auth-divider">or enter PIN</div>
+        <input class="auth-input" id="mbr-pin" type="password" maxlength="4" placeholder="4-digit PIN" oninput="if(this.value.length===4)checkMbrPin('${id}')">
+        <div class="auth-error" id="mbr-err"></div>
+        <div class="auth-hint">Default PIN: 0000</div>
+        <button onclick="renderMbrSelect(document.getElementById('view-member'))"
+          style="margin-top:14px;font-size:12px;color:var(--muted);background:none;text-decoration:underline;cursor:pointer;border:none">
+          ← Back
         </button>
       </div>
     </div>`;
-  window._mbrPin = '';
-  window._mbrId  = id;
 }
-function mbrKey(n, id) {
-  if ((window._mbrPin || '').length >= 4) return;
-  window._mbrPin = (window._mbrPin || '') + n;
-  updatePinDots('mbr-dots', window._mbrPin.length);
-  if (window._mbrPin.length === 4) checkMbrPin(id);
+
+function demoMbrLogin(id) {
+  sessionStorage.setItem('gjc_mbr_authed', id);
+  renderMember();
 }
-function mbrBack() {
-  window._mbrPin = (window._mbrPin || '').slice(0, -1);
-  updatePinDots('mbr-dots', window._mbrPin.length);
-}
+
 function checkMbrPin(id) {
-  const members = getMembers();
-  const m = members.find(x => x.id === id);
-  if (m && window._mbrPin === (m.pin || '0000')) {
-    sessionStorage.setItem('gjc_mbr_authed', id);
-    renderMember();
+  const pin = document.getElementById('mbr-pin')?.value;
+  const mem = getMembers();
+  const m = mem.find(x=>x.id===id);
+  if (m && pin===(m.pin||'0000')) {
+    sessionStorage.setItem('gjc_mbr_authed',id); renderMember();
   } else {
-    const errEl = document.getElementById('mbr-pin-err');
-    if (errEl) errEl.textContent = 'Incorrect PIN — try again';
-    setTimeout(() => {
-      window._mbrPin = '';
-      updatePinDots('mbr-dots', 0);
-      if (errEl) errEl.textContent = '';
-    }, 1200);
+    const e=document.getElementById('mbr-err');
+    if(e) e.textContent='Incorrect PIN';
+    setTimeout(()=>{
+      const inp=document.getElementById('mbr-pin');
+      if(inp) inp.value='';
+      if(e) e.textContent='';
+    },1200);
   }
 }
 
-function renderMemberDashboard(el, m) {
-  const latest   = m.history[m.history.length - 1] || { skills:{}, leadership:{} };
-  const overall  = latest.overall ?? 0;
-  const approved = getApproved().filter(a => a.target === m.id);
-  const feedback = approved.filter(a => a.type === 'feedback');
-  const achs     = approved.filter(a => a.type === 'achievement');
-  const radarData = SKILLS.map(sk => latest.skills[sk.key] ?? 50);
+function renderMbrDash(el, m) {
+  const lat     = m.history[m.history.length-1]||{skills:{},leadership:{}};
+  const overall = lat.overall??0;
+  const approved= getApproved().filter(a=>a.target===m.id);
+  const fbs     = approved.filter(a=>a.type==='feedback');
+  const achs    = approved.filter(a=>a.type==='achievement');
+  const radData = SKILLS.map(sk=>lat.skills[sk.key]??50);
 
   el.innerHTML = `
-    <div class="member-page">
+    <div class="mbr-page">
       <div class="mbr-hero">
-        <div class="mbr-hero-left">
-          <div class="mbr-big-av" style="background:${m.color}">${initials(m.name)}</div>
+        <div class="mbr-hero-l">
+          <div class="mbr-hero-av" style="background:${m.color}">${ini(m.name)}</div>
           <div>
             <div class="mbr-hero-name">${m.name}</div>
-            <div class="mbr-hero-sub">${LEVEL_NAMES[m.level]} · ${m.level}</div>
+            <div class="mbr-hero-sub">${LEVEL_NAMES[m.level]} · ${m.level}${m.role?' · '+m.role:''}</div>
           </div>
         </div>
         <div class="mbr-hero-score">
           <div class="mbr-score-big">${overall}%</div>
-          <div class="mbr-score-lbl">${statusLabel(overall)}</div>
+          <div class="mbr-score-lbl">${stLabel(overall)}</div>
         </div>
       </div>
 
-      <div class="mbr-section">
-        <div class="mbr-section-hd">Growth Journey</div>
-        <div class="mbr-section-body">${buildJourneyMap(m)}</div>
+      <div class="mbr-card">
+        <div class="mbr-card-hd">Growth Journey</div>
+        <div class="mbr-card-body">${buildJmap(m)}</div>
       </div>
 
-      <div class="mbr-section">
-        <div class="mbr-section-hd">Skills Web</div>
-        <div class="mbr-section-body">
-          <div class="radar-full"><canvas id="mbrRadar"></canvas></div>
+      <div class="mbr-card">
+        <div class="mbr-card-hd">Skills Web</div>
+        <div class="mbr-card-body"><div class="radar-mbr"><canvas id="mbrRadar"></canvas></div></div>
+      </div>
+
+      <div class="mbr-card">
+        <div class="mbr-card-hd">Approved Achievements</div>
+        <div class="mbr-card-body">
+          ${achs.length?achs.map(a=>`<div class="ach-row"><span class="ach-cat">${a.category}</span><span>${a.text}</span></div>`).join(''):'<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>'}
         </div>
       </div>
 
-      <div class="mbr-section">
-        <div class="mbr-section-hd">Approved Achievements</div>
-        <div class="mbr-section-body">
-          ${achs.length ? achs.map(a => `
-            <div class="ach-item">
-              <span class="ach-cat">${a.category}</span>
-              <span>${a.text}</span>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>'}
+      <div class="mbr-card">
+        <div class="mbr-card-hd">Peer Feedback</div>
+        <div class="mbr-card-body">
+          ${fbs.length?fbs.map(f=>`<div class="fb-item fb-${f.sentiment||'positive'}">${f.text}<div class="fb-from">From ${f.from} · ${fmt(f.date)}</div></div>`).join(''):'<div style="color:var(--muted);font-size:13px">No feedback yet.</div>'}
         </div>
       </div>
 
-      <div class="mbr-section">
-        <div class="mbr-section-hd">Peer Feedback</div>
-        <div class="mbr-section-body">
-          ${feedback.length ? feedback.map(f => `
-            <div class="feedback-item feedback-${f.sentiment || 'positive'}">
-              ${f.text}
-              <div class="feedback-who">From ${f.from} · ${fmtDate(f.date)}</div>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No feedback yet.</div>'}
-        </div>
-      </div>
-
-      <div class="mbr-section">
-        <div class="mbr-section-hd">Log an Achievement</div>
-        <div class="mbr-section-body">
+      <div class="mbr-card">
+        <div class="mbr-card-hd">Log Achievement</div>
+        <div class="mbr-card-body">
           <div class="form-group">
             <label>Category</label>
             <select id="ach-cat">
@@ -997,86 +986,68 @@ function renderMemberDashboard(el, m) {
             </select>
           </div>
           <div class="form-group">
-            <label>What did you do and what was the impact?</label>
-            <textarea id="ach-text" placeholder="e.g. Led cross-team AI automation that saved 4hrs/week"></textarea>
+            <label>What you did & the impact</label>
+            <textarea id="ach-text" placeholder="e.g. Led AI automation that saved 4hrs/week for the team"></textarea>
           </div>
-          <button class="btn-primary" onclick="submitAchievement('${m.id}')">Submit for Approval</button>
+          <button class="btn-primary" onclick="submitAch('${m.id}')">Submit for Approval</button>
         </div>
       </div>
 
       <button onclick="sessionStorage.removeItem('gjc_mbr_authed');renderMember()"
-        class="btn-ghost" style="align-self:flex-start">← Switch User</button>
+        class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>
     </div>`;
 
-  setTimeout(() => {
-    const ctx = document.getElementById('mbrRadar')?.getContext('2d');
-    if (!ctx) return;
-    new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: SKILLS.map(s => s.label.split(' ')[0]),
-        datasets: [{
-          label: 'Score', data: radarData,
-          backgroundColor: 'rgba(99,102,241,.15)',
-          borderColor: '#6366F1', borderWidth: 2,
-          pointBackgroundColor: '#6366F1', pointRadius: 4,
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend:{ display:false } },
-        scales: { r: { min:0, max:100, ticks:{stepSize:25,font:{size:10},backdropColor:'transparent',color:'#94A3B8'}, grid:{color:'#E2E8F0'}, angleLines:{color:'#E2E8F0'}, pointLabels:{font:{size:10},color:'#475569'} } },
-      },
+  setTimeout(()=>{
+    const ctx=document.getElementById('mbrRadar')?.getContext('2d');
+    if(!ctx) return;
+    new Chart(ctx,{
+      type:'radar',
+      data:{labels:SKILLS.map(s=>s.label.split(' ')[0]),datasets:[{
+        label:'Score',data:radData,
+        backgroundColor:'rgba(37,99,235,.12)',
+        borderColor:'#2563EB',borderWidth:2,
+        pointBackgroundColor:'#2563EB',pointRadius:4,
+      }]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:9},backdropColor:'transparent',color:'#94A3B8'},grid:{color:'#E2E8F0'},angleLines:{color:'#E2E8F0'},pointLabels:{font:{size:9.5},color:'#475569'}}}},
     });
-  }, 80);
+  },80);
 }
 
-function submitAchievement(id) {
-  const cat  = document.getElementById('ach-cat')?.value;
-  const text = document.getElementById('ach-text')?.value?.trim();
-  if (!text) { toast('⚠ Please describe your achievement'); return; }
-  const pending = getPending();
-  pending.push({ id:'p'+Date.now(), type:'achievement', target:id, from:id, category:cat, text, date:new Date().toISOString() });
-  savePending(pending);
+function submitAch(id) {
+  const cat=document.getElementById('ach-cat')?.value;
+  const txt=document.getElementById('ach-text')?.value?.trim();
+  if(!txt){toast('⚠ Please describe your achievement');return;}
+  savePending([...getPending(),{id:'p'+Date.now(),type:'achievement',target:id,from:id,category:cat,text:txt,date:new Date().toISOString()}]);
   toast('✅ Submitted for manager approval!');
-  document.getElementById('ach-text').value = '';
+  document.getElementById('ach-text').value='';
 }
 
 /* ════════════════════════════════════════════════════════
    PEER VIEW
    ════════════════════════════════════════════════════════ */
 function renderPeer() {
-  const el = document.getElementById('view-peer');
-  const members = getMembers();
-  const opts = members.map(m => `<option value="${m.id}">${m.name} (${m.level})</option>`).join('');
-  el.innerHTML = `
+  const mem=getMembers();
+  const opts=mem.map(m=>`<option value="${m.id}">${m.name} (${m.level})</option>`).join('');
+  document.getElementById('view-peer').innerHTML=`
     <div class="peer-page">
       <div class="peer-card">
-        <div class="peer-card-hd">
-          <div class="peer-card-title">Give Peer Feedback</div>
-          <div class="peer-card-sub">Anonymous, specific & constructive</div>
+        <div class="peer-hd">
+          <div class="peer-hd-title">Give Peer Feedback</div>
+          <div class="peer-hd-sub">Anonymous, specific & constructive</div>
         </div>
-        <div class="peer-card-body">
-          <div class="peer-notice">
-            ⚠️ You cannot see scores or profiles. Only the manager reviews full assessments.
-          </div>
-          <div class="form-group">
-            <label>Your Name</label>
-            <select id="peer-from">${opts}</select>
-          </div>
-          <div class="form-group">
-            <label>Feedback For</label>
-            <select id="peer-target">${opts}</select>
-          </div>
+        <div class="peer-body">
+          <div class="peer-notice">⚠️ You cannot see scores or full profiles. Only the manager views assessments.</div>
+          <div class="form-group"><label>Your Name</label><select id="peer-from">${opts}</select></div>
+          <div class="form-group"><label>Feedback For</label><select id="peer-target">${opts}</select></div>
           <div class="form-group">
             <label>Type</label>
-            <select id="peer-sentiment">
+            <select id="peer-sent">
               <option value="positive">Positive — something they do brilliantly</option>
-              <option value="constructive">Constructive — something to work on</option>
+              <option value="constructive">Constructive — something to improve</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Specific Behaviour (min 20 characters)</label>
+            <label>Specific Behaviour (min 20 chars)</label>
             <textarea id="peer-text" placeholder="Describe a specific situation and its impact…"></textarea>
           </div>
           <button class="btn-primary" onclick="submitPeer()">Submit Feedback</button>
@@ -1086,30 +1057,36 @@ function renderPeer() {
 }
 
 function submitPeer() {
-  const from      = document.getElementById('peer-from')?.value;
-  const target    = document.getElementById('peer-target')?.value;
-  const sentiment = document.getElementById('peer-sentiment')?.value;
-  const text      = document.getElementById('peer-text')?.value?.trim();
-  if (!text || text.length < 20) { toast('⚠ Write at least 20 characters describing a specific behaviour.'); return; }
-  if (from === target) { toast('⚠ You cannot give feedback to yourself.'); return; }
-  const pending = getPending();
-  pending.push({ id:'p'+Date.now(), type:'feedback', from, target, sentiment, text, date:new Date().toISOString() });
-  savePending(pending);
+  const from=document.getElementById('peer-from')?.value;
+  const tgt =document.getElementById('peer-target')?.value;
+  const sent=document.getElementById('peer-sent')?.value;
+  const txt =document.getElementById('peer-text')?.value?.trim();
+  if(!txt||txt.length<20){toast('⚠ Write at least 20 characters describing a specific behaviour.');return;}
+  if(from===tgt){toast('⚠ You cannot give feedback to yourself.');return;}
+  savePending([...getPending(),{id:'p'+Date.now(),type:'feedback',from,target:tgt,sentiment:sent,text:txt,date:new Date().toISOString()}]);
   toast('✅ Feedback submitted for manager review!');
-  document.getElementById('peer-text').value = '';
+  document.getElementById('peer-text').value='';
 }
 
 /* ════════════════════════════════════════════════════════
    WORKFLOW VIEW
    ════════════════════════════════════════════════════════ */
 function renderWorkflow() {
-  document.getElementById('view-workflow').innerHTML = `
+  document.getElementById('view-workflow').innerHTML=`
     <div class="workflow-page">
       <h2>Growth Journey Workflow</h2>
       <img src="workflow.svg" alt="Growth Journey Workflow" style="width:100%;max-width:1100px">
     </div>`;
 }
 
-/* ── BOOT ───────────────────────────────────────────────── */
+/* ── BOOT ────────────────────────────────────────────────── */
+// Load Google Identity Services if Client ID configured
+if (GOOGLE_CLIENT_ID) {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+}
+
 initData();
 setRole('manager');
