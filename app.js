@@ -157,12 +157,11 @@ let trendChart=null, radarChart=null;
 function filterByPeriod(history,period){
   if(period==='all') return history;
   const now=new Date(), cutoff=new Date();
-  ({w2:()=>cutoff.setDate(now.getDate()-14),
-    m1:()=>cutoff.setMonth(now.getMonth()-1),
-    m3:()=>cutoff.setMonth(now.getMonth()-3),
-    m6:()=>cutoff.setMonth(now.getMonth()-6),
-    y1:()=>cutoff.setFullYear(now.getFullYear()-1),
-  }[period]||()=>{})();
+  if(period==='w2') cutoff.setDate(now.getDate()-14);
+  else if(period==='m1') cutoff.setMonth(now.getMonth()-1);
+  else if(period==='m3') cutoff.setMonth(now.getMonth()-3);
+  else if(period==='m6') cutoff.setMonth(now.getMonth()-6);
+  else if(period==='y1') cutoff.setFullYear(now.getFullYear()-1);
   const filtered=history.filter(c=>new Date(c.date)>=cutoff);
   return filtered.length>=2?filtered:history.slice(-Math.max(2,Math.ceil(history.length/2)));
 }
