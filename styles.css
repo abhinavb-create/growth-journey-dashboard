@@ -737,6 +737,56 @@ header {
 .workflow-page h2 { font-size:18px; font-weight:700; }
 .workflow-page img { max-width:100%; border-radius:var(--r-lg); border:1px solid var(--border); box-shadow:var(--sh-md); }
 
+/* ── ACHIEVEMENT FORM (member submit) ────────────────────── */
+.ach-form { display:flex; flex-direction:column; gap:14px; }
+.ach-form-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* Star rating */
+.star-row { display:flex; gap:4px; margin-top:4px; }
+.star-btn {
+  font-size:22px; color:#CBD5E1; background:none; border:none;
+  cursor:pointer; padding:2px; line-height:1;
+  transition:color .1s, transform .1s;
+}
+.star-btn:hover, .star-btn.active { color:#F59E0B; transform:scale(1.15); }
+
+/* Achievement cards (approved) */
+.ach-card {
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--r-md); padding:12px 14px; margin-bottom:8px;
+  border-left:3px solid var(--blue);
+}
+.ach-card-top { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+.ach-skill-tag {
+  background:#E0E7FF; color:#3730A3;
+  border-radius:99px; padding:2px 8px;
+  font-size:10px; font-weight:700;
+}
+.ach-rating { font-size:12px; color:#F59E0B; font-weight:600; }
+.ach-impact { font-size:12px; color:var(--text-md); margin-bottom:4px; }
+.ach-detail { font-size:12.5px; color:var(--muted); line-height:1.5; }
+.ach-meta   { font-size:10px; color:var(--subtle); margin-top:5px; }
+
+/* Member skill scores quick grid */
+.mbr-skills-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.mbr-skill-item { display:flex; flex-direction:column; gap:4px; }
+.mbr-sk-name { font-size:11px; font-weight:600; color:var(--muted); }
+.mbr-sk-bar-bg { height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
+.mbr-sk-bar-fill { height:100%; border-radius:99px; transition:width .4s; }
+.mbr-sk-score { font-size:12px; font-weight:700; }
+
+/* Pending queue enhancements */
+.p-impact { font-size:12px; color:var(--text-md); margin-bottom:3px; }
+.p-pts    { font-size:11px; color:var(--emerald); font-weight:700; margin-top:3px; }
+.p-ref    { font-size:11px; color:var(--muted); margin-top:2px; }
+.p-ref a  { color:var(--blue); text-decoration:underline; }
+.p-edit-row {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin-top:8px; padding:8px 10px;
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--r-sm);
+}
+
 /* ── TOAST ───────────────────────────────────────────────── */
 #toast {
   position:fixed; bottom:20px; left:50%; transform:translateX(-50%);

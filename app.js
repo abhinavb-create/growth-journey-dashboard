@@ -7,7 +7,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 const GOOGLE_CLIENT_ID = '';
 const MANAGER_EMAIL    = '';
-const DATA_VERSION     = '6';   // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '7';   // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -79,23 +79,11 @@ const LDR_SOL = {
   decision:    { SA:'Document reasoning for major decisions', AM:'Use RACI for all team decisions', M:'Review decision quality monthly in retros', SM:'Implement a decision-making framework org-wide' },
 };
 
-/* ── DEFAULT SCORES ─────────────────────────────────────── */
-const DEF_SKILLS = {
-  JA: { sales:48, reporting:45, maturity:50, independence:42, ai:55, xfunc:40, escalation:48, comms:50, enthusiasm:60 },
-  A:  { sales:58, reporting:55, maturity:60, independence:55, ai:62, xfunc:52, escalation:58, comms:62, enthusiasm:68 },
-  SA: { sales:68, reporting:65, maturity:70, independence:66, ai:72, xfunc:64, escalation:68, comms:70, enthusiasm:75 },
-  AM: { sales:75, reporting:72, maturity:78, independence:74, ai:78, xfunc:72, escalation:75, comms:76, enthusiasm:80 },
-  M:  { sales:82, reporting:80, maturity:85, independence:82, ai:84, xfunc:80, escalation:82, comms:84, enthusiasm:88 },
-  SM: { sales:88, reporting:86, maturity:90, independence:88, ai:90, xfunc:86, escalation:88, comms:90, enthusiasm:92 },
-};
-const DEF_LDR = {
-  JA: { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 },
-  A:  { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 },
-  SA: { people:58, vision:52, stakeholder:55, developing:50, resilience:62, decision:58 },
-  AM: { people:70, vision:65, stakeholder:68, developing:64, resilience:72, decision:70 },
-  M:  { people:80, vision:76, stakeholder:78, developing:75, resilience:82, decision:79 },
-  SM: { people:88, vision:84, stakeholder:86, developing:83, resilience:88, decision:86 },
-};
+/* ── DEFAULT SCORES — all start at 0, earned through manager ratings & approved achievements ── */
+var _z = { sales:0, reporting:0, maturity:0, independence:0, ai:0, xfunc:0, escalation:0, comms:0, enthusiasm:0 };
+const DEF_SKILLS = { JA:_z, A:_z, SA:_z, AM:_z, M:_z, SM:_z };
+var _zl = { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 };
+const DEF_LDR = { JA:_zl, A:_zl, SA:_zl, AM:_zl, M:_zl, SM:_zl };
 
 /* ── SEED ───────────────────────────────────────────────── */
 const SEED = [
@@ -154,14 +142,9 @@ function initData() {
 function makeSnap(level, daysAgo) {
   var d = new Date(); d.setDate(d.getDate() - daysAgo);
   var skills = {}, ldr = {};
-  Object.keys(DEF_SKILLS[level]).forEach(function(k) {
-    skills[k] = clamp(DEF_SKILLS[level][k] + rnd(14));
-  });
-  Object.keys(DEF_LDR[level]).forEach(function(k) {
-    var b = DEF_LDR[level][k];
-    ldr[k] = b > 0 ? clamp(b + rnd(14)) : 0;
-  });
-  return { date: d.toISOString(), skills: skills, leadership: ldr, note:'', comments:{}, overall: calcOverall(skills, ldr, level) };
+  Object.keys(DEF_SKILLS[level]).forEach(function(k) { skills[k] = 0; });
+  Object.keys(DEF_LDR[level]).forEach(function(k) { ldr[k] = 0; });
+  return { date: d.toISOString(), skills: skills, leadership: ldr, note:'', comments:{}, overall: 0 };
 }
 function clamp(v) { return Math.min(100, Math.max(0, Math.round(v))); }
 function rnd(r)   { return Math.round((Math.random() - .5) * r); }
@@ -962,6 +945,19 @@ function drawRadar(current, prev) {
 }
 
 /* ── PENDING ─────────────────────────────────────────────── */
+/* Rating → score points mapping: 1★=4pts, 2★=8pts, 3★=12pts, 4★=16pts, 5★=20pts */
+function ratingToPoints(r) { return (parseInt(r)||0) * 4; }
+
+function skillLabelFromKey(key) {
+  if (!key) return '';
+  if (key.indexOf('ldr_') === 0) {
+    var lk = LEADERSHIP.find(function(x) { return 'ldr_'+x.key === key; });
+    return lk ? lk.label+' (Leadership)' : key;
+  }
+  var sk = SKILLS.find(function(x) { return x.key === key; });
+  return sk ? sk.label : key;
+}
+
 function buildPending() {
   var p   = getPending();
   var mem = getMembers();
@@ -970,16 +966,37 @@ function buildPending() {
 
   var items = p.length
     ? p.map(function(item) {
-        return '<div class="pending-item">'
-          + '<div class="p-icon">'+(item.type==='achievement'?'🏅':'💬')+'</div>'
+        var isAch = item.type === 'achievement';
+        var skillLabel = isAch ? skillLabelFromKey(item.skillKey) : '';
+        var stars = item.selfRating ? ['','★','★★','★★★','★★★★','★★★★★'][item.selfRating] : '';
+        var pts   = item.selfRating ? '+'+ratingToPoints(item.selfRating)+' pts on approval' : '';
+
+        return '<div class="pending-item" id="pi-'+item.id+'">'
+          + '<div class="p-icon">'+(isAch?'🏅':'💬')+'</div>'
           + '<div class="p-content">'
-          + '<div class="p-who">'+(nm[item.target]||item.target)+' · '+(item.type==='achievement'?item.category:'Peer feedback from '+(nm[item.from]||item.from))+'</div>'
+          + '<div class="p-who">'+(nm[item.target]||item.target)
+          +   (isAch ? ' · <span class="ach-cat" style="margin-left:4px">'+item.category+'</span>' : ' · Peer feedback from '+(nm[item.from]||item.from))
+          +   (skillLabel ? ' · <span class="ach-skill-tag">'+skillLabel+'</span>' : '')
+          +   (stars ? ' · <span class="ach-rating">'+stars+'</span>' : '')
+          + '</div>'
+          + (isAch && item.impact ? '<div class="p-impact"><strong>Impact:</strong> '+item.impact+'</div>' : '')
           + '<div class="p-text">'+item.text+'</div>'
+          + (isAch && item.ref ? '<div class="p-ref">📎 <a href="'+item.ref+'" target="_blank">'+item.ref+'</a></div>' : '')
+          + (isAch && pts ? '<div class="p-pts">'+pts+' to <em>'+skillLabel+'</em></div>' : '')
           + '<div class="p-meta">'+fmt(item.date)+'</div>'
+          /* Manager editable rating override */
+          + (isAch ? '<div class="p-edit-row">'
+          +   '<label style="font-size:11px;font-weight:600">Adjust rating before approving: </label>'
+          +   '<div class="star-row" id="mgr-star-'+item.id+'">'
+          +   [1,2,3,4,5].map(function(n) {
+                return '<button type="button" class="star-btn'+(n<=(item.selfRating||0)?' active':'')+'" data-val="'+n+'" onclick="setMgrStar(\''+item.id+'\','+n+')">★</button>';
+              }).join('')
+          +   '</div><input type="hidden" id="mgr-rating-'+item.id+'" value="'+(item.selfRating||0)+'">'
+          + '</div>' : '')
           + '</div>'
           + '<div class="p-actions">'
-          + '<button class="btn-sm btn-approve" onclick="approveItem(\''+item.id+'\')">Approve</button>'
-          + '<button class="btn-sm btn-remove"  onclick="removeItem(\''+item.id+'\')">Remove</button>'
+          + '<button class="btn-sm btn-approve" onclick="approveItem(\''+item.id+'\')">✓ Approve</button>'
+          + '<button class="btn-sm btn-remove"  onclick="removeItem(\''+item.id+'\')">✕ Reject</button>'
           + '</div></div>';
       }).join('')
     : '<div class="empty"><div class="empty-icon">✅</div>No pending items — inbox zero!</div>';
@@ -991,21 +1008,79 @@ function buildPending() {
     + '</div>';
 }
 
+function setMgrStar(pid, n) {
+  var inp = document.getElementById('mgr-rating-'+pid);
+  if (inp) inp.value = n;
+  var row = document.getElementById('mgr-star-'+pid);
+  if (row) {
+    row.querySelectorAll('.star-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.val) <= n);
+    });
+  }
+  /* update pts label live */
+  var ptEl = document.querySelector('#pi-'+pid+' .p-pts');
+  var skEl = document.querySelector('#pi-'+pid+' .p-pts em');
+  if (ptEl && skEl) ptEl.innerHTML = '+'+ratingToPoints(n)+' pts on approval to <em>'+skEl.textContent+'</em>';
+}
+
 function approveItem(pid) {
   var p = getPending();
   var item = null;
   for (var i = 0; i < p.length; i++) { if (p[i].id === pid) { item = p[i]; break; } }
   if (!item) return;
+
+  /* Read manager-adjusted rating if present */
+  var mgrRatingEl = document.getElementById('mgr-rating-'+pid);
+  if (mgrRatingEl && mgrRatingEl.value) item.selfRating = parseInt(mgrRatingEl.value) || item.selfRating;
+
+  /* Apply score points to member's latest snapshot */
+  if (item.type === 'achievement' && item.skillKey && item.selfRating) {
+    var mem = getMembers();
+    var pts = ratingToPoints(item.selfRating);
+    for (var mi = 0; mi < mem.length; mi++) {
+      if (mem[mi].id === item.target) {
+        var m = mem[mi];
+        /* Clone latest snapshot */
+        var lat = m.history[m.history.length-1];
+        var newSnap = JSON.parse(JSON.stringify(lat));
+        newSnap.date = new Date().toISOString();
+        newSnap.note = 'Achievement approved: '+item.category;
+        /* Apply to correct skill or leadership */
+        if (item.skillKey.indexOf('ldr_') === 0) {
+          var lKey = item.skillKey.replace('ldr_','');
+          if (newSnap.leadership && newSnap.leadership[lKey] !== undefined) {
+            newSnap.leadership[lKey] = Math.min(100, (newSnap.leadership[lKey]||0) + pts);
+          }
+        } else {
+          if (newSnap.skills && newSnap.skills[item.skillKey] !== undefined) {
+            newSnap.skills[item.skillKey] = Math.min(100, (newSnap.skills[item.skillKey]||0) + pts);
+          }
+        }
+        newSnap.overall = calcOverall(newSnap.skills, newSnap.leadership, m.level);
+        m.history.push(newSnap);
+        break;
+      }
+    }
+    saveMembers(mem);
+  }
+
   savePending(p.filter(function(x) { return x.id !== pid; }));
-  var approved = getApproved();
   item.approvedDate = new Date().toISOString();
-  approved.push(item);
-  saveApproved(approved);
-  buildPending(); toast('✅ Approved!');
+  saveApproved([...getApproved(), item]);
+
+  /* Refresh all sections */
+  var updMem = getMembers();
+  buildKPI(updMem);
+  buildChart(updMem);
+  buildReportees(updMem);
+  if (selId) renderDeepDive(selId);
+  buildPending();
+  toast('✅ Approved & score updated!');
 }
+
 function removeItem(pid) {
   savePending(getPending().filter(function(x) { return x.id !== pid; }));
-  buildPending(); toast('🗑 Removed');
+  buildPending(); toast('🗑 Rejected');
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1088,28 +1163,84 @@ function renderMbrDash(el, m) {
   var approved = getApproved().filter(function(a) { return a.target === m.id; });
   var fbs  = approved.filter(function(a) { return a.type === 'feedback'; });
   var achs = approved.filter(function(a) { return a.type === 'achievement'; });
-  var radData = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
+  var radData = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 0; });
+
+  var skillOpts = SKILLS.map(function(sk) { return '<option value="'+sk.key+'">'+sk.label+'</option>'; }).join('');
+  var ldrOpts   = LEADERSHIP.map(function(lk) { return '<option value="ldr_'+lk.key+'">'+lk.label+' (Leadership)</option>'; }).join('');
+
+  var achRows = achs.length ? achs.map(function(a) {
+    var skillName = '';
+    if (a.skillKey) {
+      if (a.skillKey.indexOf('ldr_') === 0) {
+        var lk = LEADERSHIP.find(function(x) { return 'ldr_'+x.key === a.skillKey; });
+        skillName = lk ? lk.label : '';
+      } else {
+        var sk = SKILLS.find(function(x) { return x.key === a.skillKey; });
+        skillName = sk ? sk.label : '';
+      }
+    }
+    return '<div class="ach-card">'
+      + '<div class="ach-card-top">'
+      + '<span class="ach-cat">'+a.category+'</span>'
+      + (skillName ? '<span class="ach-skill-tag">'+skillName+'</span>' : '')
+      + (a.selfRating ? '<span class="ach-rating">'+['','★','★★','★★★','★★★★','★★★★★'][a.selfRating||0]+' ('+a.selfRating+'/5)</span>' : '')
+      + '</div>'
+      + (a.impact ? '<div class="ach-impact"><strong>Impact:</strong> '+a.impact+'</div>' : '')
+      + '<div class="ach-detail">'+a.text+'</div>'
+      + '<div class="ach-meta">Approved · '+fmt(a.approvedDate||a.date)+'</div>'
+      + '</div>';
+  }).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>';
 
   el.innerHTML = '<div class="mbr-page">'
+    /* Hero — score is shown prominently */
     + '<div class="mbr-hero">'
     + '<div class="mbr-hero-l">'
     + '<div class="mbr-hero-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
     + '<div><div class="mbr-hero-name">'+m.name+'</div><div class="mbr-hero-sub">'+LEVEL_NAMES[m.level]+' · '+m.level+(m.role?' · '+m.role:'')+'</div></div>'
     + '</div>'
-    + '<div class="mbr-hero-score"><div class="mbr-score-big">'+overall+'%</div><div class="mbr-score-lbl">'+stLabel(overall)+'</div></div>'
+    + '<div class="mbr-hero-score">'
+    + '<div class="mbr-score-big">'+overall+'%</div>'
+    + '<div class="mbr-score-lbl">'+stLabel(overall)+'</div>'
+    + '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px">Overall score</div>'
     + '</div>'
+    + '</div>'
+    /* Skill scores quick view */
+    + '<div class="mbr-card"><div class="mbr-card-hd">My Skill Scores</div><div class="mbr-card-body">'
+    + '<div class="mbr-skills-grid">'
+    + SKILLS.map(function(sk) {
+        var v = lat.skills[sk.key] || 0;
+        var c = stColor(v);
+        return '<div class="mbr-skill-item"><div class="mbr-sk-name">'+sk.label+'</div>'
+          + '<div class="mbr-sk-bar-bg"><div class="mbr-sk-bar-fill" style="width:'+v+'%;background:'+c+'"></div></div>'
+          + '<div class="mbr-sk-score" style="color:'+c+'">'+v+'%</div></div>';
+      }).join('')
+    + '</div></div></div>'
+    /* Journey */
     + '<div class="mbr-card"><div class="mbr-card-hd">Growth Journey</div><div class="mbr-card-body">'+buildJmap(m)+'</div></div>'
+    /* Radar */
     + '<div class="mbr-card"><div class="mbr-card-hd">Skills Web</div><div class="mbr-card-body"><div class="radar-mbr"><canvas id="mbrRadar"></canvas></div></div></div>'
-    + '<div class="mbr-card"><div class="mbr-card-hd">Approved Achievements</div><div class="mbr-card-body">'
-    + (achs.length ? achs.map(function(a) { return '<div class="ach-row"><span class="ach-cat">'+a.category+'</span><span>'+a.text+'</span></div>'; }).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>')
-    + '</div></div>'
+    /* Achievements */
+    + '<div class="mbr-card"><div class="mbr-card-hd">Approved Achievements</div><div class="mbr-card-body">'+achRows+'</div></div>'
+    /* Peer feedback */
     + '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback</div><div class="mbr-card-body">'
     + (fbs.length ? fbs.map(function(f) { return '<div class="fb-item fb-'+(f.sentiment||'positive')+'">'+f.text+'<div class="fb-from">From '+f.from+' · '+fmt(f.date)+'</div></div>'; }).join('') : '<div style="color:var(--muted);font-size:13px">No feedback yet.</div>')
     + '</div></div>'
+    /* Log achievement — rich form */
     + '<div class="mbr-card"><div class="mbr-card-hd">Log Achievement</div><div class="mbr-card-body">'
+    + '<div class="ach-form">'
+    + '<div class="ach-form-row">'
     + '<div class="form-group"><label>Category</label><select id="ach-cat"><option>Brand/Deal</option><option>AI Initiative</option><option>Cross-functional</option><option>Process Improvement</option><option>Mentoring</option><option>Other</option></select></div>'
-    + '<div class="form-group"><label>What you did &amp; the impact</label><textarea id="ach-text" placeholder="e.g. Led AI automation that saved 4hrs/week for the team"></textarea></div>'
-    + '<button class="btn-primary" onclick="submitAch(\''+m.id+'\')">Submit for Approval</button>'
+    + '<div class="form-group"><label>Skill / Competency Impacted</label><select id="ach-skill"><option value="">— Select skill —</option>'+skillOpts+ldrOpts+'</select></div>'
+    + '<div class="form-group"><label>Self-Rating (out of 5)</label>'
+    + '<div class="star-row" id="star-row">'
+    + [1,2,3,4,5].map(function(n) { return '<button type="button" class="star-btn" data-val="'+n+'" onclick="setStar('+n+')">★</button>'; }).join('')
+    + '</div><input type="hidden" id="ach-rating" value="0"></div>'
+    + '</div>'
+    + '<div class="form-group"><label>Impact — what changed because of this?</label><textarea id="ach-impact" placeholder="e.g. Saved 4 hrs/week for the team, increased deal velocity by 20%..." rows="2"></textarea></div>'
+    + '<div class="form-group"><label>Details — what exactly did you do?</label><textarea id="ach-text" placeholder="Describe the situation, actions you took, and specific outcome..." rows="3"></textarea></div>'
+    + '<div class="form-group"><label>Reference / Link (optional)</label><input type="text" id="ach-ref" placeholder="https://... or doc name, ticket, deal ID"></div>'
+    + '<button class="btn-primary" onclick="submitAch(\''+m.id+'\')">Submit for Manager Approval →</button>'
+    + '</div>'
     + '</div></div>'
     + '<button onclick="sessionStorage.removeItem(\'gjc_mbr_authed\');renderMember()" class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>'
     + '</div>';
@@ -1130,17 +1261,42 @@ function renderMbrDash(el, m) {
   }, 80);
 }
 
+function setStar(n) {
+  document.getElementById('ach-rating').value = n;
+  var btns = document.querySelectorAll('.star-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.dataset.val) <= n);
+  });
+}
+
 function submitAch(id) {
-  var catEl = document.getElementById('ach-cat');
-  var txtEl = document.getElementById('ach-text');
-  var cat = catEl ? catEl.value : '';
-  var txt = txtEl ? txtEl.value.trim() : '';
-  if (!txt) { toast('⚠ Please describe your achievement'); return; }
+  var cat    = (document.getElementById('ach-cat')    || {}).value || '';
+  var skill  = (document.getElementById('ach-skill')  || {}).value || '';
+  var rating = parseInt((document.getElementById('ach-rating') || {}).value || '0');
+  var impact = ((document.getElementById('ach-impact') || {}).value || '').trim();
+  var text   = ((document.getElementById('ach-text')   || {}).value || '').trim();
+  var ref    = ((document.getElementById('ach-ref')    || {}).value || '').trim();
+
+  if (!text)   { toast('⚠ Please describe what you did in Details.'); return; }
+  if (!skill)  { toast('⚠ Please select a skill or competency.'); return; }
+  if (!rating) { toast('⚠ Please give a self-rating (1–5 stars).'); return; }
+  if (!impact) { toast('⚠ Please describe the impact.'); return; }
+
   var pending = getPending();
-  pending.push({ id:'p'+Date.now(), type:'achievement', target:id, from:id, category:cat, text:txt, date:new Date().toISOString() });
+  pending.push({
+    id: 'p'+Date.now(), type:'achievement',
+    target: id, from: id,
+    category: cat, skillKey: skill, selfRating: rating,
+    impact: impact, text: text, ref: ref,
+    date: new Date().toISOString()
+  });
   savePending(pending);
   toast('✅ Submitted for manager approval!');
-  if (txtEl) txtEl.value = '';
+  /* reset form */
+  ['ach-impact','ach-text','ach-ref'].forEach(function(fid) { var el=document.getElementById(fid); if(el) el.value=''; });
+  var re=document.getElementById('ach-rating'); if(re) re.value='0';
+  document.querySelectorAll('.star-btn').forEach(function(b){b.classList.remove('active');});
+  var sk=document.getElementById('ach-skill'); if(sk) sk.value='';
 }
 
 /* ════════════════════════════════════════════════════════
