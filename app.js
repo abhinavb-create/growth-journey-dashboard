@@ -7,6 +7,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 const GOOGLE_CLIENT_ID = '';
 const MANAGER_EMAIL    = '';
+const DATA_VERSION     = '6';   // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -124,7 +125,18 @@ const getHighlights  = function() { return ld('gjc_highlights', {}); };
 const saveHighlights = function(obj) { sv('gjc_highlights', obj); };
 
 function initData() {
-  let mem = getMembers();
+  // Auto-clear stale data when DATA_VERSION changes
+  var storedVersion = localStorage.getItem('gjc_data_version');
+  if (storedVersion !== DATA_VERSION) {
+    localStorage.removeItem('gjc_members');
+    localStorage.removeItem('gjc_pending');
+    localStorage.removeItem('gjc_approved');
+    localStorage.removeItem('gjc_coaching');
+    localStorage.removeItem('gjc_highlights');
+    localStorage.setItem('gjc_data_version', DATA_VERSION);
+  }
+
+  var mem = getMembers();
   if (!mem.length) {
     mem = SEED.map(function(s, i) {
       return Object.assign({}, s, {
