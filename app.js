@@ -7,7 +7,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 const GOOGLE_CLIENT_ID = '';
 const MANAGER_EMAIL    = '';
-const DATA_VERSION     = '7';   // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '8';   // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -916,8 +916,8 @@ function saveSnapshot(id) {
     return score < 45 && !hasNote;
   });
   if (noComment.length) {
-    toast('⚠ Add a coaching note for: '+noComment.map(function(x) { return x.label; }).join(', '));
-    /* Open the coaching log for each weak skill */
+    /* Non-blocking advisory — open the panels but still allow saving */
+    toast('💡 Tip: add coaching notes for ' + noComment.map(function(x) { return x.label; }).join(', ') + ' (saved anyway)');
     noComment.forEach(function(sk) {
       var log = document.getElementById('cn-log-'+sk.key);
       var toggle = document.getElementById('cn-toggle-'+sk.key);
@@ -926,7 +926,6 @@ function saveSnapshot(id) {
         if (toggle) toggle.classList.add('open');
       }
     });
-    return;
   }
 
   var noteEl = document.getElementById('mgr-note');
