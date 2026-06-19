@@ -45,7 +45,7 @@ const SK_CTX = {
   independence: { JA:'Needs daily check-ins', A:'Works autonomously on tasks', SA:'Owns projects end-to-end', AM:'Directs others autonomously', M:'Sets direction for function', SM:'Full strategic independence' },
   ai:           { JA:'Uses AI tools with help', A:'Integrates AI in workflow', SA:'Identifies AI opportunities', AM:'Leads AI initiatives', M:'Sets AI adoption strategy', SM:'Drives org-wide AI transformation' },
   xfunc:        { JA:'Works within own team', A:'Collaborates across 1-2 teams', SA:'Partners across multiple functions', AM:'Drives cross-functional projects', M:'Aligns multiple functions', SM:'Builds cross-org partnerships' },
-  escalation:   { JA:'Escalates with context', A:'Proposes solutions when escalating', SA:'Resolves most issues independently', AM:'Guides team on escalation judgement', M:'Sets escalation framework', SM:'Resolves strategically, rarely escalates' },
+  escalation:   { JA:'Escalates frequently — still building judgement', A:'Escalates with context & proposed solutions', SA:'Occasionally escalates; resolves most independently', AM:'Rarely escalates; guides team on judgement', M:'Almost never escalates; sets escalation policy', SM:'Escalation is an exception — resolves at org level' },
   comms:        { JA:'Clear written & verbal basics', A:'Adapts style to audience', SA:'Influences through communication', AM:'Communicates vision to team', M:'Effective upward & external comms', SM:'Represents org in high-stakes forums' },
   enthusiasm:   { JA:'Shows up positively', A:'Contributes ideas proactively', SA:'Energises team & drives initiatives', AM:'Builds morale and culture', M:'Champions culture across function', SM:'Brand ambassador for org' },
 };
@@ -164,7 +164,14 @@ function stKey(s) { return s>=85?'high':s>=70?'track':s>=45?'dev':'needs'; }
 function stLabel(s) { return {high:'High Performer',track:'On Track',dev:'Developing',needs:'Needs Attention'}[stKey(s)]; }
 function stClass(s) { return 'chip chip-'+stKey(s); }
 function stColor(s) { return {high:'#059669',track:'#2563EB',dev:'#D97706',needs:'#DC2626'}[stKey(s)]; }
-function skColors(v) {
+function skColors(v, key) {
+  /* Escalation Quality is inverted — lower escalation rate = better = green */
+  if (key === 'escalation') {
+    if (v <= 15)  return ['#059669','#D1FAE5'];   // rarely escalates → green
+    if (v <= 35)  return ['#2563EB','#EFF6FF'];   // sometimes → blue
+    if (v <= 55)  return ['#D97706','#FEF3C7'];   // often → amber
+    return ['#DC2626','#FEE2E2'];                  // very high → red
+  }
   if (v >= 85) return ['#059669','#D1FAE5'];
   if (v >= 70) return ['#2563EB','#EFF6FF'];
   if (v >= 45) return ['#D97706','#FEF3C7'];
@@ -623,7 +630,7 @@ function renderDeepDive(id) {
   var skillCards = SKILLS.map(function(sk, idx) {
     var val  = lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50;
     var prevVal = prev ? (prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : null) : null;
-    var colArr = skColors(val);
+    var colArr = skColors(val, sk.key);
     var c = colArr[0], bg = colArr[1];
     var slBg = 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)';
     var ctx  = (SK_CTX[sk.key] && SK_CTX[sk.key][m.level]) ? SK_CTX[sk.key][m.level] : '';
@@ -814,7 +821,7 @@ function syncSlider(el, memberId) {
   var val  = +el.value;
   var key  = el.dataset.key;
   var type = el.dataset.type;
-  var colArr = skColors(val);
+  var colArr = skColors(val, key);
   var c = colArr[0], bg = colArr[1];
   var slBg = 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)';
 
@@ -1209,7 +1216,7 @@ function renderMbrDash(el, m) {
     + '<div class="mbr-skills-grid">'
     + SKILLS.map(function(sk) {
         var v = lat.skills[sk.key] || 0;
-        var c = stColor(v);
+        var c = skColors(v, sk.key)[0];
         return '<div class="mbr-skill-item"><div class="mbr-sk-name">'+sk.label+'</div>'
           + '<div class="mbr-sk-bar-bg"><div class="mbr-sk-bar-fill" style="width:'+v+'%;background:'+c+'"></div></div>'
           + '<div class="mbr-sk-score" style="color:'+c+'">'+v+'%</div></div>';
