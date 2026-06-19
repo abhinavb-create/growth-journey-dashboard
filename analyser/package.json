@@ -1,0 +1,17 @@
+{
+  "name": "growth-journey-wa-bridge",
+  "version": "1.0.0",
+  "description": "WhatsApp Web bridge for Growth Journey AI Analyser",
+  "main": "wa_bridge.js",
+  "scripts": {
+    "start": "node wa_bridge.js",
+    "fetch": "node wa_bridge.js --days 14"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

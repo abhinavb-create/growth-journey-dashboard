@@ -137,6 +137,166 @@ function initData() {
     mem = mem.map(function(m, i) { return Object.assign({ color: AV_COLORS[i % AV_COLORS.length] }, m); });
     saveMembers(mem);
   }
+
+  applyAIScores();
+}
+
+/* ── AI SCORE INTEGRATION ─────────────────────────────────── */
+
+/* Map from analyser skill keys → dashboard skill keys */
+var AI_SKILL_KEY_MAP = {
+  'sales':            'sales',
+  'reporting':        'reporting',
+  'maturity':         'maturity',
+  'independence':     'independence',
+  'ai_adoption':      'ai',
+  'cross_functional': 'xfunc',
+  'escalation':       'escalation',
+  'communication':    'comms',
+  'enthusiasm':       'enthusiasm',
+};
+var AI_LDR_KEY_MAP = {
+  'people_leadership':     'people',
+  'vision_strategy':       'vision',
+  'stakeholder_influence': 'stakeholder',
+  'developing_others':     'developing',
+  'resilience':            'resilience',
+  'decision_quality':      'decision',
+};
+
+function getAIEnabled() {
+  return ld('gjc_ai_enabled', true);
+}
+
+function toggleAIScoring() {
+  var enabled = !getAIEnabled();
+  sv('gjc_ai_enabled', enabled);
+  var label = document.getElementById('ai-toggle-label');
+  if (label) label.textContent = enabled ? 'ON' : 'OFF';
+  var btn = document.getElementById('ai-toggle-btn');
+  if (btn) btn.classList.toggle('ai-toggle-off', !enabled);
+  if (enabled) {
+    applyAIScores();
+    toast('🤖 AI scores enabled');
+  } else {
+    toast('AI scores hidden — showing manual scores only');
+  }
+  // Re-render if we're on the manager view
+  var mem = getMembers();
+  if (mem.length) renderManager();
+}
+
+function applyAIScores() {
+  if (!getAIEnabled()) return;
+
+  var aiScores = window.AI_SCORES;
+  if (!aiScores || typeof aiScores !== 'object') return;
+
+  var names = Object.keys(aiScores);
+  if (!names.length) return;
+
+  var mem = getMembers();
+  if (!mem.length) return;
+
+  var today = new Date().toISOString().slice(0,10);
+  var updated = 0;
+
+  mem = mem.map(function(m) {
+    var ai = aiScores[m.name];
+    if (!ai) return m;
+
+    // Skip if AI data is stale (older than 7 days)
+    var aiDate = ai.last_updated || '';
+    if (aiDate) {
+      var diff = (new Date(today) - new Date(aiDate)) / (1000 * 60 * 60 * 24);
+      if (diff > 7) return m;
+    }
+
+    // Check if we already have an AI snapshot for this date
+    var lat = m.history[m.history.length - 1];
+    var lastAiSnap = null;
+    for (var i = m.history.length - 1; i >= 0; i--) {
+      if (m.history[i].source === 'ai') { lastAiSnap = m.history[i]; break; }
+    }
+    if (lastAiSnap && lastAiSnap.date && lastAiSnap.date.slice(0,10) === aiDate) {
+      // Already applied for this date — update in-place to keep history clean
+      var newHistory = m.history.map(function(h) {
+        if (h.source === 'ai' && h.date && h.date.slice(0,10) === aiDate) {
+          return buildAISnap(m.level, ai, aiDate);
+        }
+        return h;
+      });
+      return Object.assign({}, m, { history: newHistory });
+    }
+
+    // Build new AI snapshot
+    var snap = buildAISnap(m.level, ai, aiDate || today);
+    var history = m.history.concat([snap]);
+    updated++;
+    return Object.assign({}, m, { history: history });
+  });
+
+  saveMembers(mem);
+
+  if (updated > 0) {
+    toast('🤖 AI scores updated for ' + updated + ' member' + (updated === 1 ? '' : 's'));
+  }
+
+  // Sync toggle label
+  var label = document.getElementById('ai-toggle-label');
+  if (label) label.textContent = 'ON';
+}
+
+function buildAISnap(level, ai, dateStr) {
+  var skills = {};
+  var ldr    = {};
+
+  Object.keys(DEF_SKILLS[level] || DEF_SKILLS['A']).forEach(function(dashKey) {
+    skills[dashKey] = 0;
+  });
+  Object.keys(DEF_LDR[level] || DEF_LDR['A']).forEach(function(dashKey) {
+    ldr[dashKey] = 0;
+  });
+
+  // Map AI skill keys → dashboard skill keys
+  if (ai.skills) {
+    Object.keys(AI_SKILL_KEY_MAP).forEach(function(aiKey) {
+      var dashKey = AI_SKILL_KEY_MAP[aiKey];
+      var val = ai.skills[aiKey];
+      if (val !== null && val !== undefined && dashKey in skills) {
+        skills[dashKey] = Math.max(0, Math.min(100, Math.round(val)));
+      }
+    });
+  }
+
+  // Map AI leadership keys → dashboard leadership keys
+  if (ai.leadership) {
+    Object.keys(AI_LDR_KEY_MAP).forEach(function(aiKey) {
+      var dashKey = AI_LDR_KEY_MAP[aiKey];
+      var val = ai.leadership[aiKey];
+      if (val !== null && val !== undefined && dashKey in ldr) {
+        ldr[dashKey] = Math.max(0, Math.min(100, Math.round(val)));
+      }
+    });
+  }
+
+  var isoDate = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString();
+  var overall = calcOverall(skills, ldr, level);
+
+  return {
+    date:       isoDate,
+    skills:     skills,
+    leadership: ldr,
+    note:       '🤖 AI-derived from WhatsApp / Gmail / Slack analysis',
+    comments:   {},
+    overall:    overall,
+    source:     'ai',
+    ai_meta: {
+      sources:    ai.sources || [],
+      confidence: ai.confidence || 0,
+      last_updated: ai.last_updated || dateStr,
+    },
+  };
 }
 
 function makeSnap(level, daysAgo) {
@@ -655,6 +815,16 @@ function renderDeepDive(id) {
       ? '<span class="sk-avg-badge">Avg '+period.toUpperCase()+': '+avgVal+'%</span>'
       : '';
 
+    /* AI badge — shown when latest snapshot is AI-derived */
+    var aiBadge = '';
+    if (getAIEnabled() && lat.source === 'ai' && lat.ai_meta) {
+      var aiDate = lat.ai_meta.last_updated || (lat.date ? lat.date.slice(0,10) : '');
+      var aiSrc  = (lat.ai_meta.sources || []).join(', ') || 'ai';
+      var aiConf = lat.ai_meta.confidence ? Math.round(lat.ai_meta.confidence * 100) + '% confidence' : '';
+      var aiTip  = 'AI-derived · ' + aiDate + (aiSrc ? ' · sources: ' + aiSrc : '') + (aiConf ? ' · ' + aiConf : '');
+      aiBadge = '<span class="sk-ai-badge" title="' + aiTip + '">🤖 AI</span>';
+    }
+
     /* Notes */
     var notes = (coaching[id] && coaching[id][sk.key]) ? coaching[id][sk.key] : [];
     var notesHtml = notes.length
@@ -676,7 +846,7 @@ function renderDeepDive(id) {
     return '<div class="sk-card">'
       + '<div class="sk-card-hd">'
       + '<div class="sk-card-name">'+sk.label+'<small>'+ctx+'</small></div>'
-      + '<div class="sk-card-badges">'+avgBadge+trendHtml+'<span class="sk-score-badge" id="bd-'+sk.key+'" style="--sb-col:'+c+';--sb-bg:'+bg+'">'+val+'%</span></div>'
+      + '<div class="sk-card-badges">'+avgBadge+trendHtml+aiBadge+'<span class="sk-score-badge" id="bd-'+sk.key+'" style="--sb-col:'+c+';--sb-bg:'+bg+'">'+val+'%</span></div>'
       + '</div>'
       + '<div class="sk-slider-row">'
       + '<input type="range" class="sk-slider" min="0" max="100" value="'+val+'"'
@@ -1381,3 +1551,12 @@ if (GOOGLE_CLIENT_ID) {
 
 initData();
 setRole('manager');
+
+// Sync AI toggle button state on load
+(function() {
+  var enabled = getAIEnabled();
+  var label = document.getElementById('ai-toggle-label');
+  var btn   = document.getElementById('ai-toggle-btn');
+  if (label) label.textContent = enabled ? 'ON' : 'OFF';
+  if (btn)   btn.classList.toggle('ai-toggle-off', !enabled);
+}());

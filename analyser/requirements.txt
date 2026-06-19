@@ -1,0 +1,7 @@
+anthropic
+google-auth-oauthlib
+google-api-python-client
+slack-sdk
+pyyaml
+python-dateutil
+rich

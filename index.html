@@ -26,6 +26,9 @@
       <button class="nav-btn"        id="tab-workflow" onclick="setRole('workflow')">🗺 Workflow</button>
     </nav>
     <div class="header-user" id="header-user"></div>
+  <button class="ai-toggle-btn" id="ai-toggle-btn" onclick="toggleAIScoring()" title="Toggle AI-derived scores">
+    🤖 AI Scoring: <span id="ai-toggle-label">ON</span>
+  </button>
   </header>
   <div id="view-manager" class="view"></div>
   <div id="view-member"  class="view" style="display:none"></div>
@@ -33,6 +36,8 @@
   <div id="view-workflow"class="view" style="display:none"></div>
 </div>
 <div id="toast"></div>
+<script>window.AI_SCORES = window.AI_SCORES || {};</script>
+<script src="analyser/ai_scores.js" onerror="console.log('No AI scores yet — run analyser/analyser.py to generate them.')"></script>
 <script src="app.js?v=8"></script>
 </body>
 </html>

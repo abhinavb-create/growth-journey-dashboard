@@ -1,0 +1,11 @@
+anthropic_api_key: ""          # fill in before running — console.anthropic.com
+gmail_credentials: ""          # path to Gmail OAuth JSON (e.g. ./credentials.json)
+slack_bot_token: ""            # xoxb-...
+budget_usd: 10.0               # hard cap — analyser aborts if total spend exceeds this
+budget_warn_usd: 8.0           # warn at this level but continue
+obsidian_vault: "~/Obsidian/Growth Journey"
+dashboard_dir: "/Users/abhinav.b/Downloads/growth-journey-dashboard"
+lookback_days: 14              # how many days of messages to fetch
+model_rate: "claude-3-haiku-20240307"
+model_deep: "claude-3-5-sonnet-20241022"  # used for final synthesis
+whatsapp_output: "./wa_messages.json"      # written by Node bridge
