@@ -896,14 +896,36 @@ function saveSnapshot(id) {
     var el = document.getElementById('sl-ldr-'+lk.key);
     l[lk.key] = el ? +el.value : (lat.leadership ? (lat.leadership[lk.key] !== undefined ? lat.leadership[lk.key] : 0) : 0);
   });
-  document.querySelectorAll('.comment-box textarea').forEach(function(ta) {
-    if (ta.dataset.key) comments[ta.dataset.key] = ta.value.trim();
+  /* Check coaching notes from the persistent store (gjc_coaching) */
+  var coaching = getCoaching();
+  var memberNotes = coaching[id] || {};
+
+  /* Also pick up any note currently typed in the textarea (not yet saved via Add Note) */
+  SKILLS.forEach(function(sk) {
+    var taEl = document.getElementById('cn-input-'+sk.key);
+    if (taEl && taEl.value.trim()) {
+      /* Count unsaved textarea content as an existing note for validation */
+      if (!memberNotes[sk.key]) memberNotes[sk.key] = [];
+      memberNotes[sk.key] = memberNotes[sk.key].concat([{ text: taEl.value.trim(), _unsaved: true }]);
+    }
   });
 
-  var noComment = SKILLS.filter(function(sk) { return (s[sk.key]!==undefined?s[sk.key]:50)<45 && !comments[sk.key]; });
+  var noComment = SKILLS.filter(function(sk) {
+    var score = s[sk.key] !== undefined ? s[sk.key] : 0;
+    var hasNote = memberNotes[sk.key] && memberNotes[sk.key].length > 0;
+    return score < 45 && !hasNote;
+  });
   if (noComment.length) {
     toast('⚠ Add a coaching note for: '+noComment.map(function(x) { return x.label; }).join(', '));
-    noComment.forEach(function(sk) { var el = document.getElementById('cbox-'+sk.key); if (el) el.classList.add('open'); });
+    /* Open the coaching log for each weak skill */
+    noComment.forEach(function(sk) {
+      var log = document.getElementById('cn-log-'+sk.key);
+      var toggle = document.getElementById('cn-toggle-'+sk.key);
+      if (log && !log.classList.contains('open')) {
+        log.classList.add('open');
+        if (toggle) toggle.classList.add('open');
+      }
+    });
     return;
   }
 
