@@ -6,6 +6,5 @@ analyser/.wwebjs_auth/
 analyser/wa_messages.json
 analyser/node_modules/
 
-# AI scores are generated locally — don't commit
-analyser/ai_scores.js
+# ai_scores_log is local only — ai_scores.js IS committed (needed by GitHub Pages)
 analyser/ai_scores_log.json

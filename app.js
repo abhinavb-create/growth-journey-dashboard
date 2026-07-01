@@ -5,9 +5,18 @@
    ═══════════════════════════════════════════════════════════ */
 
 /* ── CONFIG ──────────────────────────────────────────────── */
-const GOOGLE_CLIENT_ID = '';
-const MANAGER_EMAIL    = '';
-const DATA_VERSION     = '10';  // bump this whenever seed data changes → auto-clears stale localStorage
+/* ══════════════════════════════════════════════════════════
+   CONFIG — fill these in after creating Google OAuth creds
+   ══════════════════════════════════════════════════════════
+   1. Go to console.cloud.google.com → APIs & Services → Credentials
+   2. Create OAuth 2.0 Client ID (Web application)
+   3. Add Authorised JavaScript origin: https://abhinavb-create.github.io
+   4. Paste the Client ID below
+   5. Set MANAGER_EMAIL to your Google account email
+   ═════════════════════════════════════════════════════════ */
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
+const MANAGER_EMAIL    = 'abhinav.b@razorpay.com';   // ← your email
+const DATA_VERSION     = '11';  // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -115,17 +124,19 @@ var _zl = { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decis
 const DEF_LDR = { JA:_zl, A:_zl, SA:_zl, AM:_zl, M:_zl, SM:_zl };
 
 /* ── SEED ───────────────────────────────────────────────── */
+/* ── Team member real emails — must match their Google account ── */
 const SEED = [
-  { id:'m1', name:'Anam Imteyaz',       level:'JA', role:'Junior Associate, Emerging Business',        email:'anam@example.com',    pod_leader:false },
-  { id:'m2', name:'Chandel Yajat',      level:'A',  role:'Associate, Enterprise Sales',               email:'chandel@example.com', pod_leader:false },
-  { id:'m3', name:'Suman Soumya Dash',  level:'AM', role:'Associate Manager, Startup Hunting',        email:'suman@example.com',   pod_leader:true  },
-  { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha@example.com',  pod_leader:true  },
-  { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirub@example.com',   pod_leader:false },
-  { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi@example.com',   pod_leader:true  },
-  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Business Operations',     email:'mary@example.com',    pod_leader:false, role_type:'ops' },
-  { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind@example.com',  pod_leader:true  },
-  { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka@example.com',pod_leader:false },
+  { id:'m1', name:'Anam Imteyaz',       level:'JA', role:'Junior Associate, Emerging Business',        email:'anam.imteyaz@razorpay.com',    pod_leader:false },
+  { id:'m2', name:'Chandel Yajat',      level:'A',  role:'Associate, Enterprise Sales',               email:'yajat.chandel@razorpay.com',   pod_leader:false },
+  { id:'m3', name:'Suman Soumya Dash',  level:'AM', role:'Associate Manager, Startup Hunting',        email:'suman.dash@razorpay.com',      pod_leader:true  },
+  { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha.john@razorpay.com',     pod_leader:true  },
+  { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirubhavani.b@razorpay.com',   pod_leader:false },
+  { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi.agarwal@razorpay.com',   pod_leader:true  },
+  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Business Operations',     email:'mary.pulamte@razorpay.com',    pod_leader:false, role_type:'ops' },
+  { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind.bora@razorpay.com',     pod_leader:true  },
+  { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka.pati@razorpay.com',   pod_leader:false },
 ];
+/* NOTE: Update emails above to match each person's actual Google/Razorpay email */
 
 /* POD Leader leadership weights — override default LDR_WEIGHT by level */
 const POD_LDR_WEIGHT = { JA:0.10, A:0.15, SA:0.20, AM:0.30, M:0.40, SM:0.50 };
@@ -424,94 +435,160 @@ function toast(msg) {
   setTimeout(function() { t.classList.remove('show'); }, 2800);
 }
 
-/* ── HEADER USER ─────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   AUTH  — Role-based Google Sign-In
+   Roles determined by email after sign-in:
+     manager  → MANAGER_EMAIL → full dashboard
+     member   → email matches SEED entry → own view only
+     peer     → any other verified Google account
+   ════════════════════════════════════════════════════════ */
+var googleUser = null;
+
+/* Derive role and matched member from an email */
+function roleForEmail(email) {
+  if (!email) return { role:'peer', member:null };
+  var norm = email.toLowerCase().trim();
+  if (norm === MANAGER_EMAIL.toLowerCase().trim()) return { role:'manager', member:null };
+  var mem = getMembers();
+  for (var i = 0; i < mem.length; i++) {
+    if (mem[i].email && mem[i].email.toLowerCase().trim() === norm) {
+      return { role:'member', member: mem[i] };
+    }
+  }
+  return { role:'peer', member:null };
+}
+
+/* Show/hide nav tabs based on role */
+function applyNavForRole(role) {
+  var tabs = {
+    manager:  document.getElementById('tab-manager'),
+    member:   document.getElementById('tab-member'),
+    peer:     document.getElementById('tab-peer'),
+    workflow: document.getElementById('tab-workflow'),
+  };
+  var aiBtn = document.getElementById('ai-toggle-btn');
+  if (role === 'manager') {
+    /* Manager sees everything */
+    Object.values(tabs).forEach(function(t) { if (t) t.style.display = ''; });
+    if (aiBtn) aiBtn.style.display = '';
+  } else if (role === 'member') {
+    /* Member sees only their tab + workflow */
+    if (tabs.manager)  tabs.manager.style.display  = 'none';
+    if (tabs.member)   tabs.member.style.display   = '';
+    if (tabs.peer)     tabs.peer.style.display     = 'none';
+    if (tabs.workflow) tabs.workflow.style.display  = '';
+    if (aiBtn) aiBtn.style.display = 'none';
+  } else {
+    /* Peer sees only peer + workflow */
+    if (tabs.manager)  tabs.manager.style.display  = 'none';
+    if (tabs.member)   tabs.member.style.display   = 'none';
+    if (tabs.peer)     tabs.peer.style.display     = '';
+    if (tabs.workflow) tabs.workflow.style.display  = '';
+    if (aiBtn) aiBtn.style.display = 'none';
+  }
+}
+
 function updateHeaderUser(user) {
   var wrap = document.getElementById('header-user');
   if (!wrap) return;
   if (!user) { wrap.innerHTML = ''; return; }
   var picHtml = user.picture
     ? '<img src="'+user.picture+'" alt="">'
-    : ini(user.name || 'U');
+    : '<div style="background:var(--blue);color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">'+ini(user.name||'U')+'</div>';
   wrap.innerHTML = '<div class="header-avatar">'+picHtml+'</div>'
-    + '<span class="header-name">'+(user.name||'').split(' ')[0]+'</span>'
+    + '<span class="header-name">'+(user.name||user.email||'').split(' ')[0]+'</span>'
     + '<button class="btn-signout" onclick="signOut()">Sign out</button>';
 }
 
-/* ════════════════════════════════════════════════════════
-   AUTH  — Google Sign-In + email fallback
-   ════════════════════════════════════════════════════════ */
-var googleUser = null;
-
+/* Called by Google Identity Services after sign-in */
 function handleGoogleCredential(response) {
   try {
     var payload = JSON.parse(atob(response.credential.split('.')[1]));
     googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
-    sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
-    updateHeaderUser(googleUser);
-    if (!MANAGER_EMAIL || MANAGER_EMAIL === googleUser.email || MANAGER_EMAIL === '') {
-      sessionStorage.setItem('gjc_mgr_authed', '1');
-    }
-    renderManager();
-  } catch(e) { console.error(e); }
+    sessionStorage.setItem('gjc_user', JSON.stringify(googleUser));
+    afterSignIn(googleUser);
+  } catch(e) {
+    console.error('Auth error', e);
+    showSignIn('Sign-in failed. Please try again.');
+  }
+}
+
+function afterSignIn(user) {
+  updateHeaderUser(user);
+  var result = roleForEmail(user.email);
+  applyNavForRole(result.role);
+  sessionStorage.setItem('gjc_role', result.role);
+  if (result.member) sessionStorage.setItem('gjc_member_id', result.member.id);
+
+  /* Hide sign-in overlay */
+  var overlay = document.getElementById('signin-overlay');
+  if (overlay) overlay.style.display = 'none';
+
+  if (result.role === 'manager') {
+    setRole('manager');
+  } else if (result.role === 'member') {
+    /* Pre-select their member in the member view */
+    sessionStorage.setItem('gjc_preselect_member', result.member.id);
+    setRole('member');
+  } else {
+    setRole('peer');
+  }
 }
 
 function signOut() {
   googleUser = null;
   sessionStorage.clear();
   updateHeaderUser(null);
-  setRole('manager');
+  showSignIn();
 }
 
-function renderManagerAuth(el) {
-  var gBtn = GOOGLE_CLIENT_ID
-    ? '<div id="g_id_onload" data-client_id="'+GOOGLE_CLIENT_ID+'" data-callback="handleGoogleCredential" data-auto_prompt="false"></div>'
-      + '<div class="g_id_signin" data-type="standard" data-theme="outline" data-size="large" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left" style="width:100%;margin-bottom:10px"></div>'
-    : '<button class="google-btn" onclick="demoManagerLogin()">'
-      + '<svg viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.5-.2-2.7-.5-3.5z"/></svg>'
-      + 'Sign in with Google</button>';
+/* Show the full-page sign-in overlay */
+function showSignIn(errMsg) {
+  /* Hide all views, show overlay */
+  ['manager','member','peer','workflow'].forEach(function(r) {
+    var v = document.getElementById('view-'+r);
+    if (v) v.style.display = 'none';
+  });
+  /* Hide all nav tabs while signed out */
+  ['tab-manager','tab-member','tab-peer','tab-workflow'].forEach(function(id) {
+    var t = document.getElementById(id); if (t) t.style.display = 'none';
+  });
+  var aiBtn = document.getElementById('ai-toggle-btn');
+  if (aiBtn) aiBtn.style.display = 'none';
 
-  var emailFallback = !GOOGLE_CLIENT_ID
-    ? '<div class="auth-divider">or enter email</div>'
-      + '<input class="auth-input" id="mgr-email" type="email" placeholder="you@company.com">'
-      + '<button class="btn-primary" style="width:100%" onclick="emailManagerLogin()">Continue</button>'
-      + '<div class="auth-error" id="mgr-err"></div>'
-      + '<div class="auth-hint">Demo mode — any email works. Set MANAGER_EMAIL in app.js to restrict access.</div>'
-    : '';
+  var overlay = document.getElementById('signin-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'signin-overlay';
+    document.getElementById('app').appendChild(overlay);
+  }
+  var needClientId = (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf('YOUR_GOOGLE') === 0);
+  var gsiHtml = needClientId
+    ? '<div class="auth-hint" style="color:#DC2626">⚠️ Google Client ID not configured yet.<br>See setup instructions in app.js line 8.</div>'
+    : '<div id="g_id_onload" data-client_id="'+GOOGLE_CLIENT_ID+'" data-callback="handleGoogleCredential" data-auto_prompt="true" data-context="signin" data-ux_mode="popup"></div>'
+      + '<div class="g_id_signin" data-type="standard" data-theme="outline" data-size="large" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>';
 
-  el.innerHTML = '<div class="auth-overlay"><div class="auth-card">'
+  overlay.innerHTML = '<div class="auth-card">'
     + '<div class="auth-logo">📊</div>'
-    + '<div class="auth-title">Manager Access</div>'
-    + '<div class="auth-sub">Sign in with your work Google account to access the Growth Journey dashboard.</div>'
-    + gBtn + emailFallback
-    + '</div></div>';
-}
+    + '<div class="auth-title">Growth Journey</div>'
+    + '<div class="auth-sub">Sign in with your Razorpay Google account.<br>Your role is set automatically.</div>'
+    + gsiHtml
+    + (errMsg ? '<div class="auth-error" style="margin-top:12px">'+errMsg+'</div>' : '')
+    + '<div class="auth-roles-hint">'
+    + '<div>📊 Manager → full dashboard</div>'
+    + '<div>🙋 Team member → your profile only</div>'
+    + '<div>💬 Others → peer feedback only</div>'
+    + '</div>'
+    + '</div>';
 
-function demoManagerLogin() {
-  googleUser = { name:'Abhinav Srivastava', email:'abhinav@company.com', picture:'' };
-  sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
-  sessionStorage.setItem('gjc_mgr_authed','1');
-  updateHeaderUser(googleUser);
-  renderManager();
-}
+  overlay.style.display = 'flex';
 
-function emailManagerLogin() {
-  var emailEl = document.getElementById('mgr-email');
-  var email = emailEl ? emailEl.value.trim() : '';
-  if (!email || !email.includes('@')) {
-    var errEl = document.getElementById('mgr-err');
-    if (errEl) errEl.textContent = 'Enter a valid email.';
-    return;
+  /* Re-render GSI button if Google script already loaded */
+  if (window.google && window.google.accounts && !needClientId) {
+    window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+    window.google.accounts.id.renderButton(overlay.querySelector('.g_id_signin'), { theme:'outline', size:'large', text:'sign_in_with', shape:'rectangular' });
+    window.google.accounts.id.prompt();
   }
-  if (MANAGER_EMAIL && email !== MANAGER_EMAIL) {
-    var errEl2 = document.getElementById('mgr-err');
-    if (errEl2) errEl2.textContent = 'Not authorised as manager.';
-    return;
-  }
-  googleUser = { name: email.split('@')[0], email: email, picture:'' };
-  sessionStorage.setItem('gjc_google_user', JSON.stringify(googleUser));
-  sessionStorage.setItem('gjc_mgr_authed','1');
-  updateHeaderUser(googleUser);
-  renderManager();
 }
 
 /* ════════════════════════════════════════════════════════
@@ -524,14 +601,6 @@ var period     = 'all';
 
 function renderManager() {
   var el = document.getElementById('view-manager');
-
-  var storedUser = sessionStorage.getItem('gjc_google_user');
-  if (storedUser && !googleUser) {
-    googleUser = JSON.parse(storedUser);
-    updateHeaderUser(googleUser);
-  }
-
-  if (!sessionStorage.getItem('gjc_mgr_authed')) { renderManagerAuth(el); return; }
   initData();
   var mem = getMembers();
 
@@ -1327,12 +1396,15 @@ function removeItem(pid) {
    ════════════════════════════════════════════════════════ */
 function renderMember() {
   var el = document.getElementById('view-member');
-  var aid = sessionStorage.getItem('gjc_mbr_authed');
+  /* If signed-in via Google and matched to a member, auto-load their profile */
+  var preselect = sessionStorage.getItem('gjc_preselect_member');
+  var aid = preselect || sessionStorage.getItem('gjc_mbr_authed');
   if (!aid) { renderMbrSelect(el); return; }
   var mem = getMembers();
   var m = null;
   for (var i = 0; i < mem.length; i++) { if (mem[i].id === aid) { m = mem[i]; break; } }
-  if (!m) { sessionStorage.removeItem('gjc_mbr_authed'); renderMbrSelect(el); return; }
+  if (!m) { renderMbrSelect(el); return; }
+  sessionStorage.setItem('gjc_mbr_authed', m.id);
   renderMbrDash(el, m);
 }
 
@@ -1583,21 +1655,43 @@ function renderWorkflow() {
 }
 
 /* ── BOOT ────────────────────────────────────────────────── */
-if (GOOGLE_CLIENT_ID) {
+initData();
+
+/* Always load Google Identity Services */
+(function() {
   var s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.async = true; s.defer = true;
+  s.onload = function() {
+    /* Re-init GSI after script loads if overlay is visible */
+    var overlay = document.getElementById('signin-overlay');
+    var needClientId = (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf('YOUR_GOOGLE') === 0);
+    if (overlay && overlay.style.display !== 'none' && !needClientId && window.google) {
+      window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+      var btn = overlay.querySelector('.g_id_signin');
+      if (btn) window.google.accounts.id.renderButton(btn, { theme:'outline', size:'large', text:'sign_in_with', shape:'rectangular' });
+      window.google.accounts.id.prompt();
+    }
+  };
   document.head.appendChild(s);
-}
+}());
 
-initData();
-setRole('manager');
-
-// Sync AI toggle button state on load
+/* Restore session if user was already signed in */
 (function() {
-  var enabled = getAIEnabled();
-  var label = document.getElementById('ai-toggle-label');
-  var btn   = document.getElementById('ai-toggle-btn');
-  if (label) label.textContent = enabled ? 'ON' : 'OFF';
-  if (btn)   btn.classList.toggle('ai-toggle-off', !enabled);
+  var stored = sessionStorage.getItem('gjc_user');
+  if (stored) {
+    try {
+      googleUser = JSON.parse(stored);
+      afterSignIn(googleUser);
+      /* Sync AI toggle */
+      var enabled = getAIEnabled();
+      var label = document.getElementById('ai-toggle-label');
+      var btn   = document.getElementById('ai-toggle-btn');
+      if (label) label.textContent = enabled ? 'ON' : 'OFF';
+      if (btn)   btn.classList.toggle('ai-toggle-off', !enabled);
+      return;
+    } catch(e) { sessionStorage.clear(); }
+  }
+  /* No session — show sign-in */
+  showSignIn();
 }());

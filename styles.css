@@ -883,3 +883,30 @@ header {
   margin-bottom:12px;
   line-height:1.5;
 }
+
+/* ── SIGN-IN OVERLAY ─────────────────────────────────────── */
+#signin-overlay {
+  position:fixed; inset:0;
+  background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 100%);
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999;
+}
+#signin-overlay .auth-card {
+  background:#fff; border-radius:16px; padding:40px 36px;
+  width:380px; max-width:90vw;
+  box-shadow:0 24px 64px rgba(0,0,0,.35);
+  text-align:center;
+}
+#signin-overlay .auth-logo { font-size:40px; margin-bottom:12px; }
+#signin-overlay .auth-title { font-size:22px; font-weight:800; color:#0F172A; margin-bottom:6px; }
+#signin-overlay .auth-sub { font-size:13px; color:#64748B; margin-bottom:24px; line-height:1.6; }
+#signin-overlay .g_id_signin { display:flex; justify-content:center; margin-bottom:16px; }
+#signin-overlay .auth-roles-hint {
+  margin-top:20px; padding-top:16px;
+  border-top:1px solid #F1F5F9;
+  font-size:11px; color:#94A3B8;
+  display:flex; flex-direction:column; gap:4px;
+  text-align:left;
+}
+#signin-overlay .auth-hint { font-size:11px; color:#94A3B8; margin-top:8px; line-height:1.5; }
+#signin-overlay .auth-error { color:#DC2626; font-size:12px; margin-top:8px; }
