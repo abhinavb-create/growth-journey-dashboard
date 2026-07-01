@@ -7,7 +7,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 const GOOGLE_CLIENT_ID = '';
 const MANAGER_EMAIL    = '';
-const DATA_VERSION     = '9';   // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '10';  // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -26,6 +26,35 @@ const SKILLS = [
   { key:'comms',        label:'Communication' },
   { key:'enthusiasm',   label:'Enthusiasm & Drive' },
 ];
+
+/* Ops role: same keys, different labels + context */
+const SKILLS_OPS = [
+  { key:'sales',        label:'Process Quality' },
+  { key:'reporting',    label:'Reporting & Documentation' },
+  { key:'maturity',     label:'Professional Maturity' },
+  { key:'independence', label:'Ownership & Independence' },
+  { key:'ai',           label:'AI & Tool Adoption' },
+  { key:'xfunc',        label:'Cross-functional Coordination' },
+  { key:'escalation',   label:'Escalation Quality' },
+  { key:'comms',        label:'Communication' },
+  { key:'enthusiasm',   label:'SLA Adherence & Drive' },
+];
+
+const SK_CTX_OPS = {
+  sales:        { JA:'Follows process checklists accurately', A:'Owns end-to-end process with minimal errors', SA:'Identifies and closes process gaps', AM:'Designs and governs operational processes', M:'Sets ops quality standards org-wide', SM:'Shapes ops excellence strategy' },
+  reporting:    { JA:'Fills standard templates correctly', A:'Produces accurate and timely reports', SA:'Builds reporting frameworks for ops', AM:'Derives ops insights from data', M:'Governs data quality across function', SM:'Org-wide ops analytics vision' },
+  maturity:     { JA:'Professional, follows norms', A:'Self-aware under pressure', SA:'Models maturity for juniors', AM:'Handles ambiguity calmly', M:'Leads through uncertainty', SM:'Shapes culture of maturity' },
+  independence: { JA:'Needs daily check-ins', A:'Manages own workload autonomously', SA:'Owns ops projects end-to-end', AM:'Directs team autonomously', M:'Sets direction for ops function', SM:'Full strategic independence' },
+  ai:           { JA:'Uses ops tools with guidance', A:'Integrates AI/automation in workflow', SA:'Identifies automation opportunities', AM:'Leads ops automation initiatives', M:'Sets AI-ops strategy', SM:'Drives org-wide ops transformation' },
+  xfunc:        { JA:'Coordinates within own team', A:'Collaborates with 1-2 teams on ops tasks', SA:'Partners across functions on process', AM:'Drives cross-functional ops projects', M:'Aligns multiple functions on ops', SM:'Builds cross-org ops partnerships' },
+  escalation:   { JA:'Escalates frequently — still learning ops judgement', A:'Escalates with context and proposed fix', SA:'Resolves most ops issues independently', AM:'Rarely escalates; coaches team', M:'Almost never escalates; sets policy', SM:'Escalation is an exception' },
+  comms:        { JA:'Clear structured updates', A:'Adapts communication to stakeholder', SA:'Influences through clear ops communication', AM:'Communicates ops vision to team', M:'Effective upward and external comms', SM:'Represents ops in high-stakes forums' },
+  enthusiasm:   { JA:'Meets SLAs consistently', A:'Exceeds SLAs, flags risks early', SA:'Improves SLA frameworks', AM:'Drives SLA culture in team', M:'Sets SLA standards for function', SM:'Defines org SLA benchmarks' },
+};
+
+/* Returns the right skill list for a member */
+function memberSkills(m) { return (m && m.role_type === 'ops') ? SKILLS_OPS : SKILLS; }
+function memberSkCtx(m)  { return (m && m.role_type === 'ops') ? SK_CTX_OPS : SK_CTX; }
 const LEADERSHIP = [
   { key:'people',      label:'People Leadership' },
   { key:'vision',      label:'Vision & Strategy' },
@@ -93,7 +122,7 @@ const SEED = [
   { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha@example.com',  pod_leader:true  },
   { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirub@example.com',   pod_leader:false },
   { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi@example.com',   pod_leader:true  },
-  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Emerging Business Ops',   email:'mary@example.com',    pod_leader:false },
+  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Business Operations',     email:'mary@example.com',    pod_leader:false, role_type:'ops' },
   { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind@example.com',  pod_leader:true  },
   { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka@example.com',pod_leader:false },
 ];
@@ -624,7 +653,7 @@ function buildReportees(mem) {
       + ' style="--rc-color:'+col+'" onclick="selectMember(\''+m.id+'\')">'
       + '<div class="rep-top">'
       + '<div class="rep-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
-      + '<div><div class="rep-name">'+m.name+(m.pod_leader?'<span class="pod-badge">🏅 POD</span>':'')+'</div><div class="rep-role">'+(m.role || LEVEL_NAMES[m.level])+'</div></div>'
+      + '<div><div class="rep-name">'+m.name+(m.pod_leader?'<span class="pod-badge">🏅 POD</span>':'')+(m.role_type==='ops'?'<span class="ops-badge">⚙️ Ops</span>':'')+'</div><div class="rep-role">'+(m.role || LEVEL_NAMES[m.level])+'</div></div>'
       + '</div>'
       + '<div class="rep-score-row"><div class="rep-score">'+score+'%</div><span class="lvl">'+m.level+'</span></div>'
       + '<div class="rep-bar-bg"><div class="rep-bar-fill" style="width:'+score+'%;background:'+col+'"></div></div>'
@@ -796,13 +825,13 @@ function renderDeepDive(id) {
   var highlights = getHighlights();
 
   /* Skill cards */
-  var skillCards = SKILLS.map(function(sk, idx) {
+  var skillCards = memberSkills(m).map(function(sk, idx) {
     var val  = lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50;
     var prevVal = prev ? (prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : null) : null;
     var colArr = skColors(val, sk.key);
     var c = colArr[0], bg = colArr[1];
     var slBg = 'linear-gradient(to right,'+c+' '+val+'%,#E2E8F0 '+val+'%)';
-    var ctx  = (SK_CTX[sk.key] && SK_CTX[sk.key][m.level]) ? SK_CTX[sk.key][m.level] : '';
+    var ctx  = (memberSkCtx(m)[sk.key] && memberSkCtx(m)[sk.key][m.level]) ? memberSkCtx(m)[sk.key][m.level] : '';
     var hint = (SK_SOL[sk.key] && SK_SOL[sk.key][m.level]) ? SK_SOL[sk.key][m.level] : '';
 
     /* Trend badge */
@@ -920,7 +949,7 @@ function renderDeepDive(id) {
   }).join('');
 
   /* Dev plan */
-  var weak = SKILLS.filter(function(sk) { return (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50) < 65; });
+  var weak = memberSkills(m).filter(function(sk) { return (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50) < 65; });
   var devPlan = weak.length
     ? '<div class="devplan">'
       + '<div class="devplan-title">📋 Development Focus — '+weak.length+' skill'+(weak.length>1?'s':'')+' below 65%</div>'
@@ -930,8 +959,8 @@ function renderDeepDive(id) {
       + '</div>'
     : '';
 
-  var radCur = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
-  var radPrv = prev ? SKILLS.map(function(sk) { return prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : 50; }) : null;
+  var radCur = memberSkills(m).map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
+  var radPrv = prev ? memberSkills(m).map(function(sk) { return prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : 50; }) : null;
 
   document.getElementById('s-dive').innerHTML = '<div class="sec-hd">'
     + '<div><div class="sec-title">Individual Deep-Dive</div></div>'
@@ -941,7 +970,7 @@ function renderDeepDive(id) {
     + '<div class="dd-hd">'
     + '<div class="dd-member">'
     + '<div class="dd-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
-    + '<div><div class="dd-name">'+m.name+'</div><div class="dd-meta">'+(LEVEL_NAMES[m.level]+' · '+m.level+' · '+m.history.length+' snapshot'+(m.history.length!==1?'s':'')+' · '+(m.role||''))+'</div></div>'
+    + '<div><div class="dd-name">'+m.name+(m.pod_leader?'<span class="pod-badge">🏅 POD</span>':'')+(m.role_type==='ops'?'<span class="ops-badge">⚙️ Ops</span>':'')+'</div><div class="dd-meta">'+(LEVEL_NAMES[m.level]+' · '+m.level+' · '+m.history.length+' snapshot'+(m.history.length!==1?'s':'')+' · '+(m.role||''))+'</div></div>'
     + '</div>'
     + '<div class="dd-score-wrap"><div class="dd-score" id="dd-score">'+(lat.overall||0)+'%</div><div class="dd-score-lbl" id="dd-score-lbl">'+stLabel(lat.overall||0)+'</div></div>'
     + '</div>'
@@ -953,6 +982,7 @@ function renderDeepDive(id) {
     + (radPrv?'<div class="radar-leg-item"><div class="radar-leg-dot" style="background:#CBD5E1"></div>Previous</div>':'')
     + '</div></div>'
     + '<div class="skills-col">'
+    + (m.role_type==='ops' ? '<div class="ops-trajectory-banner">⚙️ <strong>Ops Trajectory</strong> — Skills reflect operational excellence, process quality & SLA delivery. Sales metric replaced by Process Quality.</div>' : '')
     + '<div class="sk-sec-title">Core Skills (9)</div>'
     + skillCards
     + '<div class="ldr-banner">🎯 <strong>Leadership weight: '+Math.round(w*100)+'%</strong> &nbsp;of overall score'
@@ -1028,7 +1058,7 @@ function recomputeOverall(memberId) {
   if (!m) return;
   var s={}, l={};
   var lat = m.history[m.history.length-1] || {skills:{},leadership:{}};
-  SKILLS.forEach(function(sk) {
+  memberSkills(m).forEach(function(sk) {
     var el = document.getElementById('sl-'+sk.key);
     s[sk.key] = el ? +el.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
   });
@@ -1069,7 +1099,7 @@ function saveSnapshot(id) {
 
   var s={}, l={}, comments={};
   var lat = m.history[m.history.length-1] || {skills:{},leadership:{}};
-  SKILLS.forEach(function(sk) {
+  memberSkills(m).forEach(function(sk) {
     var el = document.getElementById('sl-'+sk.key);
     s[sk.key] = el ? +el.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
   });
@@ -1082,7 +1112,7 @@ function saveSnapshot(id) {
   var memberNotes = coaching[id] || {};
 
   /* Also pick up any note currently typed in the textarea (not yet saved via Add Note) */
-  SKILLS.forEach(function(sk) {
+  memberSkills(m).forEach(function(sk) {
     var taEl = document.getElementById('cn-input-'+sk.key);
     if (taEl && taEl.value.trim()) {
       /* Count unsaved textarea content as an existing note for validation */
@@ -1091,7 +1121,7 @@ function saveSnapshot(id) {
     }
   });
 
-  var noComment = SKILLS.filter(function(sk) {
+  var noComment = memberSkills(m).filter(function(sk) {
     var score = s[sk.key] !== undefined ? s[sk.key] : 0;
     var hasNote = memberNotes[sk.key] && memberNotes[sk.key].length > 0;
     return score < 45 && !hasNote;
@@ -1138,7 +1168,7 @@ function drawRadar(current, prev) {
   });
   radarChart = new Chart(ctx, {
     type:'radar',
-    data:{ labels: SKILLS.map(function(s) { return s.label.split(' ')[0]; }), datasets:ds },
+    data:{ labels: memberSkills(m).map(function(s) { return s.label.split(' ')[0]; }), datasets:ds },
     options:{
       responsive:true, maintainAspectRatio:true,
       plugins:{ legend:{display:false} },
@@ -1372,9 +1402,9 @@ function renderMbrDash(el, m) {
   var approved = getApproved().filter(function(a) { return a.target === m.id; });
   var fbs  = approved.filter(function(a) { return a.type === 'feedback'; });
   var achs = approved.filter(function(a) { return a.type === 'achievement'; });
-  var radData = SKILLS.map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 0; });
+  var radData = memberSkills(m).map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 0; });
 
-  var skillOpts = SKILLS.map(function(sk) { return '<option value="'+sk.key+'">'+sk.label+'</option>'; }).join('');
+  var skillOpts = memberSkills(m).map(function(sk) { return '<option value="'+sk.key+'">'+sk.label+'</option>'; }).join('');
   var ldrOpts   = LEADERSHIP.map(function(lk) { return '<option value="ldr_'+lk.key+'">'+lk.label+' (Leadership)</option>'; }).join('');
 
   var achRows = achs.length ? achs.map(function(a) {
@@ -1384,7 +1414,7 @@ function renderMbrDash(el, m) {
         var lk = LEADERSHIP.find(function(x) { return 'ldr_'+x.key === a.skillKey; });
         skillName = lk ? lk.label : '';
       } else {
-        var sk = SKILLS.find(function(x) { return x.key === a.skillKey; });
+        var sk = memberSkills(m).find(function(x) { return x.key === a.skillKey; });
         skillName = sk ? sk.label : '';
       }
     }
@@ -1416,7 +1446,7 @@ function renderMbrDash(el, m) {
     /* Skill scores quick view */
     + '<div class="mbr-card"><div class="mbr-card-hd">My Skill Scores</div><div class="mbr-card-body">'
     + '<div class="mbr-skills-grid">'
-    + SKILLS.map(function(sk) {
+    + memberSkills(m).map(function(sk) {
         var v = lat.skills[sk.key] || 0;
         var c = skColors(v, sk.key)[0];
         return '<div class="mbr-skill-item"><div class="mbr-sk-name">'+sk.label+'</div>'
@@ -1459,7 +1489,7 @@ function renderMbrDash(el, m) {
     if (!ctx) return;
     new Chart(ctx, {
       type:'radar',
-      data:{ labels: SKILLS.map(function(s) { return s.label.split(' ')[0]; }), datasets:[{
+      data:{ labels: memberSkills(m).map(function(s) { return s.label.split(' ')[0]; }), datasets:[{
         label:'Score', data:radData,
         backgroundColor:'rgba(37,99,235,.12)',
         borderColor:'#2563EB', borderWidth:2,

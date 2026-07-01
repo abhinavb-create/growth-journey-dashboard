@@ -858,3 +858,28 @@ header {
   padding:1px 6px;
   margin-left:4px;
 }
+
+/* ── OPS ROLE ────────────────────────────────────────────── */
+.ops-badge {
+  display:inline-block;
+  background:linear-gradient(135deg,#0891B2,#0E7490);
+  color:#fff;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.4px;
+  padding:2px 8px;
+  border-radius:10px;
+  vertical-align:middle;
+  margin-left:6px;
+}
+.ops-trajectory-banner {
+  background:#EFF6FF;
+  border:1px solid #BFDBFE;
+  border-left:3px solid #0891B2;
+  border-radius:6px;
+  padding:8px 12px;
+  font-size:12px;
+  color:#0E7490;
+  margin-bottom:12px;
+  line-height:1.5;
+}
