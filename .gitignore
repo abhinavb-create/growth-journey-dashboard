@@ -1,0 +1,11 @@
+# API keys and secrets — NEVER commit these
+analyser/.env
+analyser/credentials.json
+analyser/token.json
+analyser/.wwebjs_auth/
+analyser/wa_messages.json
+analyser/node_modules/
+
+# AI scores are generated locally — don't commit
+analyser/ai_scores.js
+analyser/ai_scores_log.json

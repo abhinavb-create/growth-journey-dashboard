@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 slack_source.py — Fetch Slack messages for Growth Journey AI Analyser
 

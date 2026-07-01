@@ -18,4 +18,4 @@ kill "$WA_PID" 2>/dev/null && echo "   WhatsApp bridge stopped." || echo "   Wha
 
 echo ""
 echo "🤖 Running AI analyser..."
-python analyser.py --days "$DAYS" "$@"
+python3 analyser.py --days "$DAYS" "$@"

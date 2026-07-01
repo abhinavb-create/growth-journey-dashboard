@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """
 analyser.py — Main entry point for Growth Journey AI Analyser
@@ -40,15 +41,37 @@ TEAM = [
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 def load_config(config_path: str = 'config.yaml') -> dict:
-    """Load and validate config.yaml."""
+    """Load config.yaml, then overlay secrets from .env file (gitignored)."""
     path = Path(config_path)
     if not path.exists():
         print(f'[analyser] ERROR: config.yaml not found at {path.absolute()}')
-        print('[analyser] Copy config.yaml.example or check the path.')
         sys.exit(1)
 
     with open(path, 'r') as f:
         config = yaml.safe_load(f)
+
+    # Load .env file (key=value lines, # comments ignored)
+    env_path = Path('.env')
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k, v = k.strip(), v.strip().strip('"').strip("'")
+                if k == 'ANTHROPIC_API_KEY' and v:
+                    config['anthropic_api_key'] = v
+                elif k == 'SLACK_BOT_TOKEN' and v:
+                    config['slack_bot_token'] = v
+                elif k == 'GMAIL_CREDENTIALS' and v:
+                    config['gmail_credentials'] = v
+
+    # Also allow env vars (export ANTHROPIC_API_KEY=...)
+    if not config.get('anthropic_api_key'):
+        config['anthropic_api_key'] = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not config.get('slack_bot_token'):
+        config['slack_bot_token'] = os.environ.get('SLACK_BOT_TOKEN', '')
 
     return config
 

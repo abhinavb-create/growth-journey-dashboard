@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 claude_rater.py — Core Claude AI rating engine for Growth Journey AI Analyser
 

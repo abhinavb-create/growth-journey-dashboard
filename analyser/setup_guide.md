@@ -21,7 +21,7 @@ This installs `whatsapp-web.js` and `qrcode-terminal`.
 ## Step 2 — Install Python dependencies
 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 ---
@@ -82,7 +82,7 @@ Once connected, the bridge fetches messages and writes `wa_messages.json`, then 
 ## Step 5 — Dry run (cost estimate)
 
 ```bash
-python analyser.py --dry-run
+python3 analyser.py --dry-run
 ```
 
 This shows:
@@ -95,7 +95,7 @@ This shows:
 ## Step 6 — Run for real
 
 ```bash
-python analyser.py
+python3 analyser.py
 ```
 
 Or use the convenience script (runs WhatsApp bridge first):
@@ -108,13 +108,13 @@ Or use the convenience script (runs WhatsApp bridge first):
 
 ```bash
 # Analyse only one person
-python analyser.py --member "Anam Imteyaz"
+python3 analyser.py --member "Anam Imteyaz"
 
 # Use only specific sources
-python analyser.py --sources gmail,slack
+python3 analyser.py --sources gmail,slack
 
 # Look back further
-python analyser.py --days 30
+python3 analyser.py --days 30
 ```
 
 ---
@@ -160,7 +160,7 @@ All analysis notes are written to `~/Obsidian/Growth Journey/`:
 ## Troubleshooting
 
 **"No AI scores yet" in the browser console**
-→ Run `python analyser.py` at least once to generate `analyser/ai_scores.js`
+→ Run `python3 analyser.py` at least once to generate `analyser/ai_scores.js`
 
 **Gmail auth loop / browser doesn't open**
 → Delete `token.json` and re-run. Make sure the OAuth client type is "Desktop app" not "Web app".

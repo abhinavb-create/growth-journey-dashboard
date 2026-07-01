@@ -206,20 +206,23 @@ function applyAIScores() {
     if (!ai) return m;
 
     // Skip if AI data is stale (older than 7 days)
-    var aiDate = ai.last_updated || '';
-    if (aiDate) {
-      var diff = (new Date(today) - new Date(aiDate)) / (1000 * 60 * 60 * 24);
-      if (diff > 7) return m;
-    }
+    var aiDate = ai.last_updated || today;
+    var diff = (new Date(today) - new Date(aiDate)) / (1000 * 60 * 60 * 24);
+    if (diff > 7) return m;
 
-    // Check if we already have an AI snapshot for this date
+    // NEVER touch history if the latest snapshot is a manual save (source !== 'ai')
+    // Manual saves always win — AI is only a baseline until manager overrides
     var lat = m.history[m.history.length - 1];
+    if (lat && lat.source !== 'ai') return m;
+
+    // Find existing AI snapshot for this date
     var lastAiSnap = null;
     for (var i = m.history.length - 1; i >= 0; i--) {
       if (m.history[i].source === 'ai') { lastAiSnap = m.history[i]; break; }
     }
+
     if (lastAiSnap && lastAiSnap.date && lastAiSnap.date.slice(0,10) === aiDate) {
-      // Already applied for this date — update in-place to keep history clean
+      // Same date AI snap already exists and is still the latest — update in-place only
       var newHistory = m.history.map(function(h) {
         if (h.source === 'ai' && h.date && h.date.slice(0,10) === aiDate) {
           return buildAISnap(m.level, ai, aiDate);
@@ -229,8 +232,8 @@ function applyAIScores() {
       return Object.assign({}, m, { history: newHistory });
     }
 
-    // Build new AI snapshot
-    var snap = buildAISnap(m.level, ai, aiDate || today);
+    // No AI snap yet, or new date — append as baseline only (no manual snap exists)
+    var snap = buildAISnap(m.level, ai, aiDate);
     var history = m.history.concat([snap]);
     updated++;
     return Object.assign({}, m, { history: history });

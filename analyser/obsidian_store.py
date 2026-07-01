@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 obsidian_store.py — Manages the Obsidian vault for Growth Journey AI Analyser
 

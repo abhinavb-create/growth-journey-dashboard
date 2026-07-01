@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 gmail_source.py — Fetch Gmail messages for Growth Journey AI Analyser
 

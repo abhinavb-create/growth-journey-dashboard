@@ -1,4 +1,4 @@
-anthropic_api_key: ""          # fill in before running — console.anthropic.com
+anthropic_api_key: ""          # Set this in .env file as ANTHROPIC_API_KEY=... (never put key here — file is public)
 gmail_credentials: ""          # path to Gmail OAuth JSON (e.g. ./credentials.json)
 slack_bot_token: ""            # xoxb-...
 budget_usd: 10.0               # hard cap — analyser aborts if total spend exceeds this

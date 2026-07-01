@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 score_exporter.py — Exports AI scores to dashboard-consumable JavaScript
 

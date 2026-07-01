@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 budget_tracker.py — Anthropic API cost tracking for Growth Journey AI Analyser
 
