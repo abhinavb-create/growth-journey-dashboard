@@ -7,7 +7,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 const GOOGLE_CLIENT_ID = '';
 const MANAGER_EMAIL    = '';
-const DATA_VERSION     = '8';   // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '9';   // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -87,16 +87,19 @@ const DEF_LDR = { JA:_zl, A:_zl, SA:_zl, AM:_zl, M:_zl, SM:_zl };
 
 /* ── SEED ───────────────────────────────────────────────── */
 const SEED = [
-  { id:'m1', name:'Anam Imteyaz',       level:'JA', role:'Junior Associate, Emerging Business',        email:'anam@example.com' },
-  { id:'m2', name:'Chandel Yajat',      level:'A',  role:'Associate, Enterprise Sales',               email:'chandel@example.com' },
-  { id:'m3', name:'Suman Soumya Dash',  level:'AM', role:'Associate Manager, Startup Hunting',        email:'suman@example.com' },
-  { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha@example.com' },
-  { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirub@example.com' },
-  { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi@example.com' },
-  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Emerging Business Ops',   email:'mary@example.com' },
-  { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind@example.com' },
-  { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka@example.com' },
+  { id:'m1', name:'Anam Imteyaz',       level:'JA', role:'Junior Associate, Emerging Business',        email:'anam@example.com',    pod_leader:false },
+  { id:'m2', name:'Chandel Yajat',      level:'A',  role:'Associate, Enterprise Sales',               email:'chandel@example.com', pod_leader:false },
+  { id:'m3', name:'Suman Soumya Dash',  level:'AM', role:'Associate Manager, Startup Hunting',        email:'suman@example.com',   pod_leader:true  },
+  { id:'m4', name:'Harsha Thomas John', level:'SA', role:'Senior Associate, Emerging Business',       email:'harsha@example.com',  pod_leader:true  },
+  { id:'m5', name:'Kirubhavani B',      level:'A',  role:'Associate, Inside Sales',                   email:'kirub@example.com',   pod_leader:false },
+  { id:'m6', name:'Nishi Agarwal',      level:'AM', role:'Associate Manager, Emerging Business',      email:'nishi@example.com',   pod_leader:true  },
+  { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Emerging Business Ops',   email:'mary@example.com',    pod_leader:false },
+  { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind@example.com',  pod_leader:true  },
+  { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka@example.com',pod_leader:false },
 ];
+
+/* POD Leader leadership weights — override default LDR_WEIGHT by level */
+const POD_LDR_WEIGHT = { JA:0.10, A:0.15, SA:0.20, AM:0.30, M:0.40, SM:0.50 };
 
 /* ── STORAGE ─────────────────────────────────────────────── */
 function ld(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e) { return d; } }
@@ -225,7 +228,7 @@ function applyAIScores() {
       // Same date AI snap already exists and is still the latest — update in-place only
       var newHistory = m.history.map(function(h) {
         if (h.source === 'ai' && h.date && h.date.slice(0,10) === aiDate) {
-          return buildAISnap(m.level, ai, aiDate);
+          return buildAISnap(m.level, ai, aiDate, m.pod_leader);
         }
         return h;
       });
@@ -233,7 +236,7 @@ function applyAIScores() {
     }
 
     // No AI snap yet, or new date — append as baseline only (no manual snap exists)
-    var snap = buildAISnap(m.level, ai, aiDate);
+    var snap = buildAISnap(m.level, ai, aiDate, m.pod_leader);
     var history = m.history.concat([snap]);
     updated++;
     return Object.assign({}, m, { history: history });
@@ -250,7 +253,7 @@ function applyAIScores() {
   if (label) label.textContent = 'ON';
 }
 
-function buildAISnap(level, ai, dateStr) {
+function buildAISnap(level, ai, dateStr, pod_leader) {
   var skills = {};
   var ldr    = {};
 
@@ -284,7 +287,7 @@ function buildAISnap(level, ai, dateStr) {
   }
 
   var isoDate = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString();
-  var overall = calcOverall(skills, ldr, level);
+  var overall = calcOverall(skills, ldr, level, pod_leader);
 
   return {
     date:       isoDate,
@@ -317,10 +320,12 @@ function avg(obj) {
   var vals = Object.values(obj).filter(function(v) { return v > 0; });
   return vals.length ? Math.round(vals.reduce(function(a, b) { return a + b; }, 0) / vals.length) : 0;
 }
-function calcOverall(skills, ldr, level) {
-  var w = LDR_WEIGHT[level] || 0;
+function calcOverall(skills, ldr, level, pod_leader) {
+  var w = pod_leader ? (POD_LDR_WEIGHT[level] || LDR_WEIGHT[level] || 0)
+                     : (LDR_WEIGHT[level] || 0);
   if (w === 0) return avg(skills);
   var la = avg(Object.fromEntries(Object.entries(ldr).filter(function(e) { return e[1] > 0; })));
+  if (!la) return avg(skills);
   return Math.round(avg(skills) * (1 - w) + la * w);
 }
 function stKey(s) { return s>=85?'high':s>=70?'track':s>=45?'dev':'needs'; }
@@ -619,7 +624,7 @@ function buildReportees(mem) {
       + ' style="--rc-color:'+col+'" onclick="selectMember(\''+m.id+'\')">'
       + '<div class="rep-top">'
       + '<div class="rep-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
-      + '<div><div class="rep-name">'+m.name+'</div><div class="rep-role">'+(m.role || LEVEL_NAMES[m.level])+'</div></div>'
+      + '<div><div class="rep-name">'+m.name+(m.pod_leader?'<span class="pod-badge">🏅 POD</span>':'')+'</div><div class="rep-role">'+(m.role || LEVEL_NAMES[m.level])+'</div></div>'
       + '</div>'
       + '<div class="rep-score-row"><div class="rep-score">'+score+'%</div><span class="lvl">'+m.level+'</span></div>'
       + '<div class="rep-bar-bg"><div class="rep-bar-fill" style="width:'+score+'%;background:'+col+'"></div></div>'
@@ -783,7 +788,8 @@ function renderDeepDive(id) {
 
   var lat  = m.history[m.history.length-1] || {skills:{},leadership:{},note:'',comments:{}};
   var prev = m.history.length >= 2 ? m.history[m.history.length-2] : null;
-  var w    = LDR_WEIGHT[m.level];
+  var w    = m.pod_leader ? (POD_LDR_WEIGHT[m.level] || LDR_WEIGHT[m.level] || 0)
+                          : (LDR_WEIGHT[m.level] || 0);
   var hasL = w > 0;
 
   var coaching   = getCoaching();
@@ -949,7 +955,9 @@ function renderDeepDive(id) {
     + '<div class="skills-col">'
     + '<div class="sk-sec-title">Core Skills (9)</div>'
     + skillCards
-    + '<div class="ldr-banner">🎯 <strong>Leadership weight: '+Math.round(w*100)+'%</strong> &nbsp;of overall score'+((!hasL)?'— unlocks from Senior Associate (SA)':'')+'</div>'
+    + '<div class="ldr-banner">🎯 <strong>Leadership weight: '+Math.round(w*100)+'%</strong> &nbsp;of overall score'
+    + (m.pod_leader ? ' &nbsp;<span class="pod-badge">🏅 POD Leader</span>' : '')
+    + ((!hasL)?'— unlocks from Senior Associate (SA) or POD Leader':'')+'</div>'
     + (hasL ? '<div class="sk-sec-title">Leadership Competencies (6)</div>'+ldrRows : '')
     + '</div>'
     + '</div>'
@@ -1028,7 +1036,7 @@ function recomputeOverall(memberId) {
     var el = document.getElementById('sl-ldr-'+lk.key);
     l[lk.key] = el ? +el.value : (lat.leadership ? (lat.leadership[lk.key] !== undefined ? lat.leadership[lk.key] : 0) : 0);
   });
-  var o = calcOverall(s, l, m.level);
+  var o = calcOverall(s, l, m.level, m.pod_leader);
   var se = document.getElementById('dd-score');
   var le = document.getElementById('dd-score-lbl');
   if (se) se.textContent = o+'%';
@@ -1103,7 +1111,7 @@ function saveSnapshot(id) {
 
   var noteEl = document.getElementById('mgr-note');
   var note = noteEl ? noteEl.value.trim() : '';
-  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note:note, comments:comments, overall:calcOverall(s,l,m.level) });
+  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note:note, comments:comments, overall:calcOverall(s,l,m.level,m.pod_leader) });
   saveMembers(mem);
   toast('✅ Snapshot saved!');
   var upd = getMembers();
@@ -1257,7 +1265,7 @@ function approveItem(pid) {
             newSnap.skills[item.skillKey] = Math.min(100, (newSnap.skills[item.skillKey]||0) + pts);
           }
         }
-        newSnap.overall = calcOverall(newSnap.skills, newSnap.leadership, m.level);
+        newSnap.overall = calcOverall(newSnap.skills, newSnap.leadership, m.level, m.pod_leader);
         m.history.push(newSnap);
         break;
       }
