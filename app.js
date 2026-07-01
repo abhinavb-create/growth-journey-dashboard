@@ -14,7 +14,7 @@
    4. Paste the Client ID below
    5. Set MANAGER_EMAIL to your Google account email
    ═════════════════════════════════════════════════════════ */
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '988966755183-sar1mqrhpv8o3hkt0lh4sjrnmir6sqcr.apps.googleusercontent.com';
 const MANAGER_EMAIL    = 'abhinav.b@razorpay.com';   // ← your email
 const DATA_VERSION     = '11';  // bump this whenever seed data changes → auto-clears stale localStorage
 
