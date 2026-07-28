@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "p1785222475075",
+    "type": "feedback",
+    "from": "m2",
+    "target": "m7",
+    "sentiment": "positive",
+    "text": "Mary has been a dependable and proactive member of the team. She consistently ensures that operational processes run smoothly and is always willing to support the team whenever required.\n\nShe is approachable, responsive, and quick to resolve operational issues, which helps minimise blockers and enables the team to focus on execution. Her coordination across different stakeholders and attention to detail have made day-to-day operations much more efficient.\n\nOverall, Mary has made a meaningful contribution to the team's success through her strong operational support, collaboration, and commitment to delivering high-quality work.",
+    "date": "2026-07-28T07:07:55.075Z"
+  }
+]
