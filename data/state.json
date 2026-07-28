@@ -1374,6 +1374,12 @@
           "text": "Haven't adopted or implemented any AI workflows or tools. Need improve this significantly.",
           "date": "2026-07-28T06:53:58.675Z"
         }
+      ],
+      "reporting": [
+        {
+          "text": "Grown well, but yet reporting breaks at multiple instance on GMV & Competition data sync. Leading to offsetting numbers on POD dashboard.",
+          "date": "2026-07-28T06:55:17.890Z"
+        }
       ]
     }
   },
@@ -1417,5 +1423,5 @@
       ]
     }
   },
-  "_ts": 1785221676445
+  "_ts": 1785221717892
 }
