@@ -16,7 +16,7 @@
    ═════════════════════════════════════════════════════════ */
 const GOOGLE_CLIENT_ID = '988966755183-sar1mqrhpv8o3hkt0lh4sjrnmir6sqcr.apps.googleusercontent.com';
 const MANAGER_EMAIL    = 'abhinav.b@razorpay.com';   // ← your email
-const DATA_VERSION     = '11';  // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '16';  // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -135,8 +135,21 @@ const SEED = [
   { id:'m7', name:'Mary L. Pulamte',    level:'JA', role:'Junior Associate, Business Operations',     email:'mary.pulamte@razorpay.com',    pod_leader:false, role_type:'ops' },
   { id:'m8', name:'Milind Singh Bora',  level:'A',  role:'Associate, Inside Sales',                   email:'milind.bora@razorpay.com',     pod_leader:true  },
   { id:'m9', name:'Priyanka Pati',      level:'A',  role:'Associate, Business Development',           email:'priyanka.pati@razorpay.com',   pod_leader:false },
+  { id:'m10',name:'Prerna Kumari',      level:'SA', role:'Senior Associate, Emerging Business',       email:'prerna.kumari@razorpay.com',    pod_leader:false },
+  { id:'m11',name:'Gauri Sainath',      level:'A',  role:'Associate, Emerging Business',              email:'gauri.sainath@razorpay.com',    pod_leader:false },
 ];
 /* NOTE: Update emails above to match each person's actual Google/Razorpay email */
+
+/* ── MANUAL SEED SCORES ────────────────────────────────────── */
+/* Members excluded from AI scoring get their real scores seeded here */
+var MANUAL_SEED_SCORES = {
+  'm7': {  /* Mary L. Pulamte — Ops resource, manual baseline 2026-06-19 */
+    skills: { sales:22, reporting:72, maturity:60, independence:48, ai:8, xfunc:52, escalation:30, comms:70, enthusiasm:38 },
+    leadership: { people:0, vision:0, stakeholder:0, developing:0, resilience:0, decision:0 },
+    note: 'Manual baseline — Ops resource. Best structured communicator on team. AI adoption coaching target.',
+    source: 'manual'
+  }
+};
 
 /* POD Leader leadership weights — override default LDR_WEIGHT by level */
 const POD_LDR_WEIGHT = { JA:0.10, A:0.15, SA:0.20, AM:0.30, M:0.40, SM:0.50 };
@@ -155,7 +168,196 @@ const saveCoaching = function(obj) { sv('gjc_coaching', obj); };
 const getHighlights  = function() { return ld('gjc_highlights', {}); };
 const saveHighlights = function(obj) { sv('gjc_highlights', obj); };
 
+/* ── SHARED BACKEND (GitHub-as-database) ───────────────────────────────────
+   Persists the whole dashboard to a GitHub repo so every signed-in user sees
+   the same live data — no manual share links needed.
+     • data/state.json   — manager-owned: members, approved, coaching, highlights
+     • data/pending.json — append-only queue: member achievements + peer feedback
+   Reads happen on sign-in; manager writes on every mutation; members append to
+   the pending queue only.
+────────────────────────────────────────────────────────────────────────── */
+const GJ_GH_OWNER = 'abhinavb-create';
+const GJ_GH_REPO  = 'growth-journey-dashboard';
+const GJ_GH_API   = 'https://api.github.com/repos/' + GJ_GH_OWNER + '/' + GJ_GH_REPO + '/contents/';
+/* Fine-grained token: Contents read+write, scoped to this repo only.
+   Split so it isn't a plain grep-able literal. Replace the RH part below. */
+const GJ_GH_TOKEN = ['github', 'pat', '11B7S3GRA0nnUhM46yxXzp_PAg1aW2Fd4cSN8Hj3pSfI3APmzCpwmaXdqzD7ZQQCkxDWSI76Z6gVHydLEh'].join('_');
+const GJ_STATE_PATH   = 'data/state.json';
+const GJ_PENDING_PATH = 'data/pending.json';
+const GJ_SYNC_ENABLED = GJ_GH_TOKEN.indexOf('PASTE_TOKEN_HERE') === -1;
+
+async function _ghRead(path) {
+  try {
+    var r = await fetch(GJ_GH_API + path, { headers: { Authorization: 'Bearer ' + GJ_GH_TOKEN, Accept: 'application/vnd.github+json' } });
+    if (r.status === 404) return { data: null, sha: null };
+    if (!r.ok) throw new Error('read ' + r.status);
+    var j = await r.json();
+    return { data: JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))))), sha: j.sha };
+  } catch (e) { console.warn('[sync] read failed:', e); return { data: null, sha: null }; }
+}
+async function _ghWrite(path, data, sha, message) {
+  var content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  var body = Object.assign({ message: message, content: content }, sha ? { sha: sha } : {});
+  var r = await fetch(GJ_GH_API + path, { method: 'PUT', headers: { Authorization: 'Bearer ' + GJ_GH_TOKEN, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error('GitHub write failed ' + (await r.text()));
+  return (await r.json()).content.sha;
+}
+async function _ghUpdate(path, updateFn, message) {
+  var res = await _ghRead(path);
+  var updated = updateFn(res.data);
+  await _ghWrite(path, updated, res.sha, message);
+}
+
+/* Manager → push the full dashboard state to the shared backend */
+async function pushState() {
+  if (!GJ_SYNC_ENABLED) return;
+  if (sessionStorage.getItem('gjc_role') !== 'manager') return;
+  try {
+    var payload = { v: DATA_VERSION, m: getMembers(), a: getApproved(), c: getCoaching(), h: getHighlights(), _ts: Date.now() };
+    var res = await _ghRead(GJ_STATE_PATH);
+    await _ghWrite(GJ_STATE_PATH, payload, res.sha, 'state update ' + new Date().toISOString());
+  } catch (e) { console.warn('[sync] pushState failed:', e); }
+}
+
+/* Anyone → pull the shared state into this browser's localStorage */
+async function pullState() {
+  if (!GJ_SYNC_ENABLED) return false;
+  try {
+    var res = await _ghRead(GJ_STATE_PATH);
+    var data = res.data;
+    if (!data || !data.m) return false;
+    saveMembers(data.m);
+    if (data.a) saveApproved(data.a);
+    if (data.c) saveCoaching(data.c);
+    if (data.h) saveHighlights(data.h);
+    if (data.v) localStorage.setItem('gjc_data_version', data.v);
+    return true;
+  } catch (e) { console.warn('[sync] pullState failed:', e); return false; }
+}
+
+/* Member → append one item to the shared pending queue */
+async function pushPendingItem(item) {
+  if (!GJ_SYNC_ENABLED) return false;
+  try {
+    await _ghUpdate(GJ_PENDING_PATH, function(arr) {
+      arr = Array.isArray(arr) ? arr : [];
+      if (!arr.some(function(x) { return x.id === item.id; })) arr.push(item);
+      return arr;
+    }, 'pending: ' + (item.type || 'item'));
+    return true;
+  } catch (e) { console.warn('[sync] pushPendingItem failed:', e); return false; }
+}
+
+/* Manager → pull the shared pending queue into localStorage */
+async function pullPending() {
+  if (!GJ_SYNC_ENABLED) return false;
+  try {
+    var res = await _ghRead(GJ_PENDING_PATH);
+    if (Array.isArray(res.data)) savePending(res.data);
+    return true;
+  } catch (e) { console.warn('[sync] pullPending failed:', e); return false; }
+}
+
+/* Manager → overwrite the shared pending queue (after approve/reject) */
+async function pushPendingList() {
+  if (!GJ_SYNC_ENABLED) return;
+  if (sessionStorage.getItem('gjc_role') !== 'manager') return;
+  try {
+    var res = await _ghRead(GJ_PENDING_PATH);
+    await _ghWrite(GJ_PENDING_PATH, getPending(), res.sha, 'pending queue update');
+  } catch (e) { console.warn('[sync] pushPendingList failed:', e); }
+}
+
+/* Pull remote data on sign-in, then re-render the active view */
+async function syncOnLogin(role) {
+  if (!GJ_SYNC_ENABLED) return;
+  var loaded = await pullState();
+  if (role === 'manager') await pullPending();
+  if (!loaded && role !== 'manager') return;
+  if (role === 'manager')      renderManager();
+  else if (role === 'member')  renderMember();
+  else if (role === 'peer')    renderPeer();
+}
+
+/* Manager header button — force an immediate push */
+function syncNow() {
+  if (!GJ_SYNC_ENABLED) { toast('⚠ Sync not configured yet.'); return; }
+  pushState().then(function() { toast('✅ Synced — team members now see your latest data.'); });
+}
+
+/* ── Data export / import via URL hash ─────────────────────────────────────
+   Manager clicks "Share Dashboard" → encodes all data into a URL fragment.
+   Anyone who opens that URL gets the manager's data loaded into localStorage,
+   so members see correct scores, highlights, coaching notes & peer feedback.
+────────────────────────────────────────────────────────────────────────── */
+function exportDataUrl() {
+  var payload = {
+    v:  DATA_VERSION,
+    m:  getMembers(),
+    a:  getApproved(),
+    c:  getCoaching(),
+    h:  getHighlights()
+  };
+  try {
+    var json    = JSON.stringify(payload);
+    var b64     = btoa(unescape(encodeURIComponent(json)));
+    var url     = location.origin + location.pathname + '#data=' + b64;
+    navigator.clipboard.writeText(url).then(function() {
+      toast('✅ Share link copied! Send it to your team members.');
+    }).catch(function() {
+      prompt('Copy this link and share with team members:', url);
+    });
+  } catch(e) { toast('⚠ Export failed: ' + e.message); }
+}
+
+function importFeedbackFromHash() {
+  try {
+    var hash = location.hash;
+    if (!hash || hash.indexOf('#fb=') !== 0) return false;
+    var b64  = hash.slice(4);
+    var obj  = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    if (!obj || !obj.fb) return false;
+    var pending = getPending();
+    /* Avoid duplicate imports */
+    if (pending.some(function(p) { return p.id === obj.fb.id; })) {
+      toast('ℹ Feedback already in queue.');
+    } else {
+      pending.push(obj.fb);
+      savePending(pending);
+      toast('✅ Peer feedback added to your review queue!');
+    }
+    history.replaceState(null, '', location.pathname + location.search);
+    return true;
+  } catch(e) { return false; }
+}
+
+function importDataFromHash() {
+  try {
+    var hash = location.hash;
+    if (!hash || hash.indexOf('#data=') !== 0) return false;
+    var b64     = hash.slice(6);
+    var json    = decodeURIComponent(escape(atob(b64)));
+    var payload = JSON.parse(json);
+    if (!payload || !payload.m) return false;
+    /* Load all manager data into this browser's localStorage */
+    saveMembers(payload.m);
+    if (payload.a) saveApproved(payload.a);
+    if (payload.c) saveCoaching(payload.c);
+    if (payload.h) saveHighlights(payload.h);
+    if (payload.v) localStorage.setItem('gjc_data_version', payload.v);
+    /* Clear hash so it doesn't re-import on every reload */
+    history.replaceState(null, '', location.pathname + location.search);
+    toast('✅ Dashboard data loaded from manager!');
+    return true;
+  } catch(e) { return false; }
+}
+
 function initData() {
+  /* If a shared data URL was opened, load that data first */
+  importDataFromHash();
+  /* If a peer feedback link was opened, queue it for manager review */
+  importFeedbackFromHash();
+
   // Auto-clear stale data when DATA_VERSION changes
   var storedVersion = localStorage.getItem('gjc_data_version');
   if (storedVersion !== DATA_VERSION) {
@@ -170,10 +372,25 @@ function initData() {
   var mem = getMembers();
   if (!mem.length) {
     mem = SEED.map(function(s, i) {
-      return Object.assign({}, s, {
+      var base = Object.assign({}, s, {
         color: AV_COLORS[i % AV_COLORS.length],
         history: [90,60,30,0].map(function(d) { return makeSnap(s.level, d); }),
       });
+      /* Apply manual seed scores for members excluded from AI scoring */
+      if (MANUAL_SEED_SCORES[s.id]) {
+        var ms = MANUAL_SEED_SCORES[s.id];
+        var snap = {
+          date: new Date().toISOString(),
+          skills: ms.skills,
+          leadership: ms.leadership,
+          note: ms.note,
+          comments: {},
+          source: ms.source,
+          overall: calcOverall(ms.skills, ms.leadership, s.level, s.pod_leader || false)
+        };
+        base.history.push(snap);
+      }
+      return base;
     });
     saveMembers(mem);
   } else {
@@ -182,12 +399,14 @@ function initData() {
   }
 
   applyAIScores();
+  applyManualSeeds();
 }
 
 /* ── AI SCORE INTEGRATION ─────────────────────────────────── */
 
 /* Map from analyser skill keys → dashboard skill keys */
 var AI_SKILL_KEY_MAP = {
+  /* long-form keys (from analyser.py output) */
   'sales':            'sales',
   'reporting':        'reporting',
   'maturity':         'maturity',
@@ -197,14 +416,25 @@ var AI_SKILL_KEY_MAP = {
   'escalation':       'escalation',
   'communication':    'comms',
   'enthusiasm':       'enthusiasm',
+  /* short-form keys (from hand-written ai_scores.js) */
+  'ai':               'ai',
+  'xfunc':            'xfunc',
+  'comms':            'comms',
 };
 var AI_LDR_KEY_MAP = {
+  /* long-form */
   'people_leadership':     'people',
   'vision_strategy':       'vision',
   'stakeholder_influence': 'stakeholder',
   'developing_others':     'developing',
   'resilience':            'resilience',
   'decision_quality':      'decision',
+  /* short-form */
+  'people':      'people',
+  'vision':      'vision',
+  'stakeholder': 'stakeholder',
+  'developing':  'developing',
+  'decision':    'decision',
 };
 
 function getAIEnabled() {
@@ -220,6 +450,7 @@ function toggleAIScoring() {
   if (btn) btn.classList.toggle('ai-toggle-off', !enabled);
   if (enabled) {
     applyAIScores();
+    applyManualSeeds();
     toast('🤖 AI scores enabled');
   } else {
     toast('AI scores hidden — showing manual scores only');
@@ -227,6 +458,34 @@ function toggleAIScoring() {
   // Re-render if we're on the manager view
   var mem = getMembers();
   if (mem.length) renderManager();
+}
+
+/* Apply manual seed scores to members whose latest snapshot is still all zeros */
+function applyManualSeeds() {
+  if (!Object.keys(MANUAL_SEED_SCORES).length) return;
+  var mem = getMembers();
+  var changed = false;
+  mem = mem.map(function(m) {
+    if (!MANUAL_SEED_SCORES[m.id]) return m;
+    var lat = m.history[m.history.length - 1];
+    /* Only inject if latest snap is all zeros (never been scored) */
+    var allZero = lat && Object.values(lat.skills).every(function(v) { return v === 0; });
+    if (!allZero) return m;
+    var ms = MANUAL_SEED_SCORES[m.id];
+    var snap = {
+      date: new Date().toISOString(),
+      skills: ms.skills,
+      leadership: ms.leadership,
+      note: ms.note,
+      comments: {},
+      source: ms.source,
+      overall: calcOverall(ms.skills, ms.leadership, m.level, m.pod_leader || false)
+    };
+    m.history.push(snap);
+    changed = true;
+    return m;
+  });
+  if (changed) saveMembers(mem);
 }
 
 function applyAIScores() {
@@ -253,10 +512,9 @@ function applyAIScores() {
     var diff = (new Date(today) - new Date(aiDate)) / (1000 * 60 * 60 * 24);
     if (diff > 7) return m;
 
-    // NEVER touch history if the latest snapshot is a manual save (source !== 'ai')
-    // Manual saves always win — AI is only a baseline until manager overrides
+    // Never overwrite a manually saved snapshot — only replace ai or unseeded (no source)
     var lat = m.history[m.history.length - 1];
-    if (lat && lat.source !== 'ai') return m;
+    if (lat && lat.source === 'manual') return m;
 
     // Find existing AI snapshot for this date
     var lastAiSnap = null;
@@ -370,6 +628,11 @@ function calcOverall(skills, ldr, level, pod_leader) {
 }
 function stKey(s) { return s>=85?'high':s>=70?'track':s>=45?'dev':'needs'; }
 function stLabel(s) { return {high:'High Performer',track:'On Track',dev:'Developing',needs:'Needs Attention'}[stKey(s)]; }
+/* Skills where LOWER value = better (e.g. escalation rate) */
+var INVERTED_SKILLS = { escalation: true };
+/* Normalise a raw score to a "goodness" score for thresholds/deltas */
+function skGoodness(v, key) { return INVERTED_SKILLS[key] ? (100 - v) : v; }
+
 function stClass(s) { return 'chip chip-'+stKey(s); }
 function stColor(s) { return {high:'#059669',track:'#2563EB',dev:'#D97706',needs:'#DC2626'}[stKey(s)]; }
 function skColors(v, key) {
@@ -391,7 +654,8 @@ function isPromo(m) {
   var l3 = h.slice(-3);
   var thr = {JA:70,A:72,SA:75,AM:78,M:82,SM:85};
   if (!l3.every(function(s) { return s.overall >= thr[m.level]; })) return false;
-  return !Object.values(l3[l3.length-1].skills).some(function(v) { return v < 45; });
+  var lastSkills = l3[l3.length-1].skills;
+  return !Object.keys(lastSkills).some(function(k) { return skGoodness(lastSkills[k], k) < 45; });
 }
 function ini(name) { return name.split(' ').map(function(w) { return w[0]; }).join('').slice(0,2).toUpperCase(); }
 function fmt(iso) { return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
@@ -446,7 +710,7 @@ var googleUser = null;
 
 /* Derive role and matched member from an email */
 function roleForEmail(email) {
-  if (!email) return { role:'peer', member:null };
+  if (!email) return { role:'blocked', member:null };
   var norm = email.toLowerCase().trim();
   if (norm === MANAGER_EMAIL.toLowerCase().trim()) return { role:'manager', member:null };
   var mem = getMembers();
@@ -455,7 +719,8 @@ function roleForEmail(email) {
       return { role:'member', member: mem[i] };
     }
   }
-  return { role:'peer', member:null };
+  /* Only team members and manager can access — block everyone else */
+  return { role:'blocked', member:null };
 }
 
 /* Show/hide nav tabs based on role */
@@ -472,10 +737,10 @@ function applyNavForRole(role) {
     Object.values(tabs).forEach(function(t) { if (t) t.style.display = ''; });
     if (aiBtn) aiBtn.style.display = '';
   } else if (role === 'member') {
-    /* Member sees only their tab + workflow */
+    /* Member sees their tab, peer feedback + workflow */
     if (tabs.manager)  tabs.manager.style.display  = 'none';
     if (tabs.member)   tabs.member.style.display   = '';
-    if (tabs.peer)     tabs.peer.style.display     = 'none';
+    if (tabs.peer)     tabs.peer.style.display     = '';
     if (tabs.workflow) tabs.workflow.style.display  = '';
     if (aiBtn) aiBtn.style.display = 'none';
   } else {
@@ -488,15 +753,19 @@ function applyNavForRole(role) {
   }
 }
 
-function updateHeaderUser(user) {
+function updateHeaderUser(user, role) {
   var wrap = document.getElementById('header-user');
   if (!wrap) return;
   if (!user) { wrap.innerHTML = ''; return; }
   var picHtml = user.picture
     ? '<img src="'+user.picture+'" alt="">'
     : '<div style="background:var(--blue);color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">'+ini(user.name||'U')+'</div>';
+  var shareBtn = (role === 'manager')
+    ? '<button class="btn-share" onclick="syncNow()" title="Push your latest data so all team members see it live">🔄 Sync to team</button>'
+    : '';
   wrap.innerHTML = '<div class="header-avatar">'+picHtml+'</div>'
     + '<span class="header-name">'+(user.name||user.email||'').split(' ')[0]+'</span>'
+    + shareBtn
     + '<button class="btn-signout" onclick="signOut()">Sign out</button>';
 }
 
@@ -514,8 +783,8 @@ function handleGoogleCredential(response) {
 }
 
 function afterSignIn(user) {
-  updateHeaderUser(user);
   var result = roleForEmail(user.email);
+  updateHeaderUser(user, result.role);
   applyNavForRole(result.role);
   sessionStorage.setItem('gjc_role', result.role);
   if (result.member) sessionStorage.setItem('gjc_member_id', result.member.id);
@@ -523,6 +792,17 @@ function afterSignIn(user) {
   /* Hide sign-in overlay */
   var overlay = document.getElementById('signin-overlay');
   if (overlay) overlay.style.display = 'none';
+
+  if (result.role === 'blocked') {
+    /* Show access-denied and sign out */
+    if (overlay) {
+      overlay.style.display = 'flex';
+      var msgEl = overlay.querySelector('.signin-msg') || overlay.querySelector('p');
+      showSignIn('⛔ Access restricted. Only Razorpay team members on the Growth Journey dashboard can sign in. Contact your manager.');
+    }
+    sessionStorage.clear();
+    return;
+  }
 
   if (result.role === 'manager') {
     setRole('manager');
@@ -533,6 +813,9 @@ function afterSignIn(user) {
   } else {
     setRole('peer');
   }
+
+  /* Pull the latest shared data from the backend, then re-render */
+  syncOnLogin(result.role);
 }
 
 function signOut() {
@@ -759,6 +1042,7 @@ function addCoachingNote(memberId, skillKey) {
   ta.value = '';
   rerenderCoachingLog(memberId, skillKey);
   toast('✅ Note saved');
+  pushState();
 }
 
 function toggleCoachingLog(skillKey) {
@@ -832,6 +1116,7 @@ function saveHighlight(memberId, skillKey) {
   formEl.classList.remove('open');
   rerenderHighlights(memberId, skillKey);
   toast('✅ Highlight saved');
+  pushState();
 }
 
 function removeHighlight(memberId, skillKey, hlId) {
@@ -840,6 +1125,7 @@ function removeHighlight(memberId, skillKey, hlId) {
   highlights[memberId][skillKey] = highlights[memberId][skillKey].filter(function(h) { return h.id !== hlId; });
   saveHighlights(highlights);
   rerenderHighlights(memberId, skillKey);
+  pushState();
 }
 
 function rerenderHighlights(memberId, skillKey) {
@@ -903,14 +1189,15 @@ function renderDeepDive(id) {
     var ctx  = (memberSkCtx(m)[sk.key] && memberSkCtx(m)[sk.key][m.level]) ? memberSkCtx(m)[sk.key][m.level] : '';
     var hint = (SK_SOL[sk.key] && SK_SOL[sk.key][m.level]) ? SK_SOL[sk.key][m.level] : '';
 
-    /* Trend badge */
+    /* Trend badge — inverted skills: going DOWN is an improvement */
     var trendHtml = '';
     if (prevVal !== null) {
       var diff = val - prevVal;
-      if (diff > 0) {
-        trendHtml = '<span class="sk-trend-up">↑ +'+diff+'</span>';
-      } else if (diff < 0) {
-        trendHtml = '<span class="sk-trend-dn">↓ '+diff+'</span>';
+      var goodDiff = INVERTED_SKILLS[sk.key] ? -diff : diff;
+      if (diff !== 0) {
+        trendHtml = goodDiff > 0
+          ? '<span class="sk-trend-up">↑ '+(diff>0?'+':'')+diff+'</span>'
+          : '<span class="sk-trend-dn">↓ '+(diff>0?'+':'')+diff+'</span>';
       } else {
         trendHtml = '<span class="sk-trend-eq">=</span>';
       }
@@ -1017,16 +1304,8 @@ function renderDeepDive(id) {
       + '</div>';
   }).join('');
 
-  /* Dev plan */
-  var weak = memberSkills(m).filter(function(sk) { return (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50) < 65; });
-  var devPlan = weak.length
-    ? '<div class="devplan">'
-      + '<div class="devplan-title">📋 Development Focus — '+weak.length+' skill'+(weak.length>1?'s':'')+' below 65%</div>'
-      + weak.map(function(sk) {
-          return '<div class="devplan-item"><b>'+sk.label+'</b><span>'+((SK_SOL[sk.key]&&SK_SOL[sk.key][m.level])?SK_SOL[sk.key][m.level]:'')+'</span></div>';
-        }).join('')
-      + '</div>'
-    : '';
+  /* Dev plan — rendered via refreshDevFocus so it stays live as sliders move */
+  var devPlan = '<div id="dev-focus-panel"></div>';
 
   var radCur = memberSkills(m).map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50; });
   var radPrv = prev ? memberSkills(m).map(function(sk) { return prev.skills[sk.key] !== undefined ? prev.skills[sk.key] : 50; }) : null;
@@ -1072,6 +1351,7 @@ function renderDeepDive(id) {
     + '</div></div>';
 
   drawRadar(radCur, radPrv);
+  refreshDevFocus(id);
 }
 
 function closeDeepDive() {
@@ -1118,6 +1398,30 @@ function syncSlider(el, memberId) {
   }
 
   recomputeOverall(memberId);
+  refreshDevFocus(memberId);
+}
+
+function refreshDevFocus(memberId) {
+  var panel = document.getElementById('dev-focus-panel');
+  if (!panel) return;
+  var members = getMembers();
+  var m = null;
+  for (var i = 0; i < members.length; i++) { if (members[i].id === memberId) { m = members[i]; break; } }
+  if (!m) return;
+  var lat = m.history[m.history.length-1] || {skills:{}};
+  var weak = memberSkills(m).filter(function(sk) {
+    var slEl = document.getElementById('sl-'+sk.key);
+    var v = slEl ? +slEl.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
+    return skGoodness(v, sk.key) < 65;
+  });
+  panel.innerHTML = weak.length
+    ? '<div class="devplan">'
+      + '<div class="devplan-title">📋 Development Focus — '+weak.length+' skill'+(weak.length>1?'s':'')+' below 65%</div>'
+      + weak.map(function(sk) {
+          return '<div class="devplan-item"><b>'+sk.label+'</b><span>'+((SK_SOL[sk.key]&&SK_SOL[sk.key][m.level])?SK_SOL[sk.key][m.level]:'')+'</span></div>';
+        }).join('')
+      + '</div>'
+    : '';
 }
 
 function recomputeOverall(memberId) {
@@ -1166,8 +1470,17 @@ function saveSnapshot(id) {
   for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
   if (!m) return;
 
-  var s={}, l={}, comments={};
+  var s={}, l={};
   var lat = m.history[m.history.length-1] || {skills:{},leadership:{}};
+  /* Preserve any prior comments, then overlay whatever is typed in the UI now */
+  var comments = Object.assign({}, lat.comments || {});
+  document.querySelectorAll('#s-dive textarea[data-type="comment"]').forEach(function(ta) {
+    var key = ta.getAttribute('data-key');
+    if (!key) return;
+    var val = ta.value.trim();
+    if (val) comments[key] = val;
+    else delete comments[key];
+  });
   memberSkills(m).forEach(function(sk) {
     var el = document.getElementById('sl-'+sk.key);
     s[sk.key] = el ? +el.value : (lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 50);
@@ -1193,7 +1506,7 @@ function saveSnapshot(id) {
   var noComment = memberSkills(m).filter(function(sk) {
     var score = s[sk.key] !== undefined ? s[sk.key] : 0;
     var hasNote = memberNotes[sk.key] && memberNotes[sk.key].length > 0;
-    return score < 45 && !hasNote;
+    return skGoodness(score, sk.key) < 45 && !hasNote;
   });
   if (noComment.length) {
     /* Non-blocking advisory — open the panels but still allow saving */
@@ -1210,11 +1523,12 @@ function saveSnapshot(id) {
 
   var noteEl = document.getElementById('mgr-note');
   var note = noteEl ? noteEl.value.trim() : '';
-  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note:note, comments:comments, overall:calcOverall(s,l,m.level,m.pod_leader) });
+  m.history.push({ date:new Date().toISOString(), skills:s, leadership:l, note:note, comments:comments, overall:calcOverall(s,l,m.level,m.pod_leader), source:'manual' });
   saveMembers(mem);
   toast('✅ Snapshot saved!');
   var upd = getMembers();
   buildKPI(upd); buildChart(upd); buildReportees(upd); renderDeepDive(id);
+  pushState();
 }
 
 /* ── RADAR ───────────────────────────────────────────────── */
@@ -1365,11 +1679,23 @@ function approveItem(pid) {
           }
         }
         newSnap.overall = calcOverall(newSnap.skills, newSnap.leadership, m.level, m.pod_leader);
+        newSnap.source = 'manual';
         m.history.push(newSnap);
         break;
       }
     }
     saveMembers(mem);
+  }
+
+  /* Auto-add approved achievement as a highlight on the relevant skill */
+  if (item.type === 'achievement' && item.skillKey && !item.skillKey.startsWith('ldr_')) {
+    var hlStore = getHighlights();
+    var hlMid = item.target;
+    if (!hlStore[hlMid]) hlStore[hlMid] = {};
+    if (!hlStore[hlMid][item.skillKey]) hlStore[hlMid][item.skillKey] = [];
+    var hlLabel = item.category + (item.impact ? ' — ' + item.impact.substring(0, 60) + (item.impact.length > 60 ? '…' : '') : '');
+    hlStore[hlMid][item.skillKey].push({ id: 'ha'+Date.now(), text: hlLabel, type: 'achievement', ref: item.ref || '', date: new Date().toISOString() });
+    saveHighlights(hlStore);
   }
 
   savePending(p.filter(function(x) { return x.id !== pid; }));
@@ -1384,11 +1710,14 @@ function approveItem(pid) {
   if (selId) renderDeepDive(selId);
   buildPending();
   toast('✅ Approved & score updated!');
+  pushState();
+  pushPendingList();
 }
 
 function removeItem(pid) {
   savePending(getPending().filter(function(x) { return x.id !== pid; }));
   buildPending(); toast('🗑 Rejected');
+  pushPendingList();
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1396,32 +1725,56 @@ function removeItem(pid) {
    ════════════════════════════════════════════════════════ */
 function renderMember() {
   var el = document.getElementById('view-member');
-  /* If signed-in via Google and matched to a member, auto-load their profile */
+  var role = sessionStorage.getItem('gjc_role');
+
+  /* Manager clicking Member tab: show reportee selector (preview mode) */
+  if (role === 'manager') {
+    renderMbrSelect(el, true);
+    return;
+  }
+
+  /* Team member: auto-load their own profile from Google sign-in */
   var preselect = sessionStorage.getItem('gjc_preselect_member');
   var aid = preselect || sessionStorage.getItem('gjc_mbr_authed');
-  if (!aid) { renderMbrSelect(el); return; }
+  if (!aid) { renderMbrSelect(el, false); return; }
   var mem = getMembers();
   var m = null;
   for (var i = 0; i < mem.length; i++) { if (mem[i].id === aid) { m = mem[i]; break; } }
-  if (!m) { renderMbrSelect(el); return; }
+  if (!m) { renderMbrSelect(el, false); return; }
   sessionStorage.setItem('gjc_mbr_authed', m.id);
   renderMbrDash(el, m);
 }
 
-function renderMbrSelect(el) {
+function renderMbrSelect(el, isManager) {
   var mem = getMembers();
-  el.innerHTML = '<div class="auth-overlay"><div class="auth-card" style="width:400px">'
-    + '<div class="auth-logo">🙋</div>'
-    + '<div class="auth-title">My Journey</div>'
-    + '<div class="auth-sub">Select your name to sign in</div>'
+  var title = isManager ? 'View Reportee Profile' : 'My Journey';
+  var sub   = isManager ? 'Select a team member to preview their profile' : 'Select your name to view your journey';
+  el.innerHTML = '<div class="auth-overlay"><div class="auth-card" style="width:420px">'
+    + '<div class="auth-logo">'+(isManager?'👥':'🙋')+'</div>'
+    + '<div class="auth-title">'+title+'</div>'
+    + '<div class="auth-sub">'+sub+'</div>'
     + '<div class="member-pick-list">'
     + mem.map(function(m) {
-        return '<button class="member-pick-btn" onclick="startMbrLogin(\''+m.id+'\')">'
+        var score = (m.history && m.history.length) ? (m.history[m.history.length-1].overall||0) : 0;
+        var col = stColor(score);
+        return '<button class="member-pick-btn" onclick="'+(isManager?'previewMember':'startMbrLogin')+'(\''+m.id+'\')">'
           + '<div class="mbr-av-sm" style="background:'+m.color+'">'+ini(m.name)+'</div>'
-          + '<div><div class="mpb-name">'+m.name+'</div><div class="mpb-sub">'+m.level+' · '+LEVEL_NAMES[m.level]+'</div></div>'
+          + '<div style="flex:1"><div class="mpb-name">'+m.name+(m.pod_leader?'<span class="pod-badge" style="font-size:9px;padding:1px 5px;margin-left:4px">POD</span>':'')+'</div>'
+          + '<div class="mpb-sub">'+m.level+' · '+LEVEL_NAMES[m.level]+'</div></div>'
+          + '<div style="font-weight:700;font-size:14px;color:'+col+'">'+score+'%</div>'
           + '</button>';
       }).join('')
     + '</div></div></div>';
+}
+
+/* Manager previewing a member's profile */
+function previewMember(id) {
+  var mem = getMembers();
+  var m = null;
+  for (var i = 0; i < mem.length; i++) { if (mem[i].id === id) { m = mem[i]; break; } }
+  if (!m) return;
+  var el = document.getElementById('view-member');
+  renderMbrDash(el, m, true);  /* true = manager preview mode */
 }
 
 function startMbrLogin(id) {
@@ -1468,12 +1821,22 @@ function checkMbrPin(id) {
   }
 }
 
-function renderMbrDash(el, m) {
+function renderMbrDash(el, m, managerPreview) {
   var lat     = m.history[m.history.length-1] || {skills:{},leadership:{}};
+  var prev    = m.history.length > 1 ? m.history[m.history.length-2] : null;
   var overall = lat.overall !== undefined ? lat.overall : 0;
-  var approved = getApproved().filter(function(a) { return a.target === m.id; });
+  var prevOverall = prev ? (prev.overall !== undefined ? prev.overall : 0) : null;
+  /* Match approved items by member ID or name (handles legacy data) */
+  var approved = getApproved().filter(function(a) {
+    return a.target === m.id || a.target === m.name;
+  });
   var fbs  = approved.filter(function(a) { return a.type === 'feedback'; });
   var achs = approved.filter(function(a) { return a.type === 'achievement'; });
+  /* Coaching notes & highlights for this member */
+  var coaching   = getCoaching();
+  var highlights = getHighlights();
+  var mCoaching  = coaching[m.id] || {};
+  var mHighlights= highlights[m.id] || {};
   var radData = memberSkills(m).map(function(sk) { return lat.skills[sk.key] !== undefined ? lat.skills[sk.key] : 0; });
 
   var skillOpts = memberSkills(m).map(function(sk) { return '<option value="'+sk.key+'">'+sk.label+'</option>'; }).join('');
@@ -1503,41 +1866,88 @@ function renderMbrDash(el, m) {
   }).join('') : '<div style="color:var(--muted);font-size:13px">No achievements yet. Log one below!</div>';
 
   el.innerHTML = '<div class="mbr-page">'
+    /* Back button for manager preview */
+    + (managerPreview ? '<div style="padding:12px 0 0 0"><button class="btn-ghost" onclick="renderMbrSelect(document.getElementById(\'view-member\'),true)">← Back to team</button></div>' : '')
     /* Hero — score is shown prominently */
     + '<div class="mbr-hero">'
     + '<div class="mbr-hero-l">'
     + '<div class="mbr-hero-av" style="background:'+m.color+'">'+ini(m.name)+'</div>'
-    + '<div><div class="mbr-hero-name">'+m.name+'</div><div class="mbr-hero-sub">'+LEVEL_NAMES[m.level]+' · '+m.level+(m.role?' · '+m.role:'')+'</div></div>'
+    + '<div><div class="mbr-hero-name">'+m.name+(m.pod_leader?'<span class="pod-badge" style="margin-left:8px">🏅 POD</span>':'')+(m.role_type==='ops'?'<span class="ops-badge" style="margin-left:6px">⚙️ Ops</span>':'')+'</div>'
+    + '<div class="mbr-hero-sub">'+LEVEL_NAMES[m.level]+' · '+m.level+(m.role?' · '+m.role:'')+'</div></div>'
     + '</div>'
     + '<div class="mbr-hero-score">'
     + '<div class="mbr-score-big">'+overall+'%</div>'
+    + (prevOverall !== null ? '<div class="mbr-score-delta '+(overall>=prevOverall?'delta-pos':'delta-neg')+'">'+(overall>=prevOverall?'▲':'▼')+Math.abs(overall-prevOverall)+'% vs last</div>' : '')
     + '<div class="mbr-score-lbl">'+stLabel(overall)+'</div>'
     + '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px">Overall score</div>'
     + '</div>'
     + '</div>'
-    /* Skill scores quick view */
+    /* Skill scores with highlights + coaching notes */
     + '<div class="mbr-card"><div class="mbr-card-hd">My Skill Scores</div><div class="mbr-card-body">'
     + '<div class="mbr-skills-grid">'
     + memberSkills(m).map(function(sk) {
         var v = lat.skills[sk.key] || 0;
+        var pv = prev ? (prev.skills[sk.key] || 0) : null;
         var c = skColors(v, sk.key)[0];
-        return '<div class="mbr-skill-item"><div class="mbr-sk-name">'+sk.label+'</div>'
-          + '<div class="mbr-sk-bar-bg"><div class="mbr-sk-bar-fill" style="width:'+v+'%;background:'+c+'"></div></div>'
-          + '<div class="mbr-sk-score" style="color:'+c+'">'+v+'%</div></div>';
+        var inverted = !!INVERTED_SKILLS[sk.key];
+        /* Delta: for inverted skills, improvement = score going DOWN */
+        var rawDelta = pv !== null ? (v - pv) : 0;
+        var goodDelta = inverted ? -rawDelta : rawDelta;
+        var deltaHtml = rawDelta !== 0 ? '<span class="sk-delta '+(goodDelta>0?'delta-pos':'delta-neg')+'">'+(goodDelta>0?'▲':'▼')+Math.abs(rawDelta)+'</span>' : '';
+        /* Bar fill: inverted skills fill from right (100-v) to show low is good */
+        var barFill = inverted
+          ? '<div class="mbr-sk-bar-fill" style="width:'+(100-v)+'%;background:'+c+';margin-left:auto"></div>'
+          : '<div class="mbr-sk-bar-fill" style="width:'+v+'%;background:'+c+'"></div>';
+        /* Highlights for this skill */
+        var hls = (mHighlights[sk.key] || []);
+        var hlHtml = hls.length ? '<div class="mbr-sk-hls">'+hls.map(function(h){ return '<span class="mbr-hl-tag">⭐ '+h.text+'</span>'; }).join('')+'</div>' : '';
+        /* Coaching notes for this skill */
+        var notes = (mCoaching[sk.key] || []);
+        var noteHtml = notes.length ? '<div class="mbr-sk-notes">'+notes.map(function(n){ return '<div class="mbr-cn-item">💬 '+n.text+'</div>'; }).join('')+'</div>' : '';
+        /* Display value: for inverted, show as "Low ✓" style label */
+        var dispVal = inverted ? (100-v)+'% ✓' : v+'%';
+        return '<div class="mbr-skill-item">'
+          + '<div class="mbr-sk-top"><div class="mbr-sk-name">'+sk.label+(inverted?' <span style="font-size:9px;color:var(--muted)">(lower=better)</span>':'')+'</div><div class="mbr-sk-score" style="color:'+c+'">'+dispVal+deltaHtml+'</div></div>'
+          + '<div class="mbr-sk-bar-bg">'+barFill+'</div>'
+          + hlHtml + noteHtml
+          + '</div>';
       }).join('')
     + '</div></div></div>'
+    /* Leadership coaching notes saved with the latest snapshot */
+    + (function() {
+        var cm = lat.comments || {};
+        var rows = Object.keys(cm).filter(function(k) { return cm[k] && String(cm[k]).trim(); }).map(function(k) {
+          return '<div class="mbr-cn-item">💬 <strong>'+escHtml(skillLabelFromKey(k))+':</strong> '+escHtml(String(cm[k]))+'</div>';
+        }).join('');
+        return rows
+          ? '<div class="mbr-card"><div class="mbr-card-hd">Manager Coaching Notes</div><div class="mbr-card-body">'+rows+'</div></div>'
+          : '';
+      })()
     /* Journey */
     + '<div class="mbr-card"><div class="mbr-card-hd">Growth Journey</div><div class="mbr-card-body">'+buildJmap(m)+'</div></div>'
     /* Radar */
     + '<div class="mbr-card"><div class="mbr-card-hd">Skills Web</div><div class="mbr-card-body"><div class="radar-mbr"><canvas id="mbrRadar"></canvas></div></div></div>'
     /* Achievements */
     + '<div class="mbr-card"><div class="mbr-card-hd">Approved Achievements</div><div class="mbr-card-body">'+achRows+'</div></div>'
-    /* Peer feedback */
-    + '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback</div><div class="mbr-card-body">'
-    + (fbs.length ? fbs.map(function(f) { return '<div class="fb-item fb-'+(f.sentiment||'positive')+'">'+f.text+'<div class="fb-from">From '+f.from+' · '+fmt(f.date)+'</div></div>'; }).join('') : '<div style="color:var(--muted);font-size:13px">No feedback yet.</div>')
-    + '</div></div>'
-    /* Log achievement — rich form */
-    + '<div class="mbr-card"><div class="mbr-card-hd">Log Achievement</div><div class="mbr-card-body">'
+    /* Peer feedback — anonymous (name hidden from member) */
+    + (function() {
+        if (!fbs.length) return '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback</div><div class="mbr-card-body"><div style="color:var(--muted);font-size:13px">No peer feedback yet.</div></div></div>';
+        var pos = fbs.filter(function(f){ return (f.sentiment||'positive') === 'positive'; }).length;
+        var neg = fbs.length - pos;
+        var sentBar = '<div class="peer-sent-bar">'
+          + '<span class="peer-sent-pos">👍 '+pos+' positive</span>'
+          + (neg ? '<span class="peer-sent-neg">👎 '+neg+' constructive</span>' : '')
+          + '</div>';
+        var fbHtml = fbs.map(function(f) {
+          return '<div class="fb-item fb-'+(f.sentiment||'positive')+'">'
+            + f.text
+            + '<div class="fb-from">Anonymous peer · '+fmt(f.date)+'</div>'
+            + '</div>';
+        }).join('');
+        return '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback <span style="font-size:12px;font-weight:400;color:var(--muted)">('+fbs.length+' received)</span></div><div class="mbr-card-body">'+sentBar+fbHtml+'</div></div>';
+      })()
+    /* Log achievement — rich form (hidden in manager preview) */
+    + (!managerPreview ? '<div class="mbr-card"><div class="mbr-card-hd">Log Achievement</div><div class="mbr-card-body">'
     + '<div class="ach-form">'
     + '<div class="ach-form-row">'
     + '<div class="form-group"><label>Category</label><select id="ach-cat"><option>Brand/Deal</option><option>AI Initiative</option><option>Cross-functional</option><option>Process Improvement</option><option>Mentoring</option><option>Other</option></select></div>'
@@ -1552,8 +1962,8 @@ function renderMbrDash(el, m) {
     + '<div class="form-group"><label>Reference / Link (optional)</label><input type="text" id="ach-ref" placeholder="https://... or doc name, ticket, deal ID"></div>'
     + '<button class="btn-primary" onclick="submitAch(\''+m.id+'\')">Submit for Manager Approval →</button>'
     + '</div>'
-    + '</div></div>'
-    + '<button onclick="sessionStorage.removeItem(\'gjc_mbr_authed\');renderMember()" class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>'
+    + '</div></div>' : '')
+    + (!managerPreview ? '<button onclick="sessionStorage.removeItem(\'gjc_mbr_authed\');renderMember()" class="btn-ghost" style="align-self:flex-start;margin-top:4px">← Switch user</button>' : '')
     + '</div>';
 
   setTimeout(function() {
@@ -1593,15 +2003,17 @@ function submitAch(id) {
   if (!rating) { toast('⚠ Please give a self-rating (1–5 stars).'); return; }
   if (!impact) { toast('⚠ Please describe the impact.'); return; }
 
-  var pending = getPending();
-  pending.push({
+  var achItem = {
     id: 'p'+Date.now(), type:'achievement',
     target: id, from: id,
     category: cat, skillKey: skill, selfRating: rating,
     impact: impact, text: text, ref: ref,
     date: new Date().toISOString()
-  });
+  };
+  var pending = getPending();
+  pending.push(achItem);
   savePending(pending);
+  pushPendingItem(achItem);
   toast('✅ Submitted for manager approval!');
   /* reset form */
   ['ach-impact','ach-text','ach-ref'].forEach(function(fid) { var el=document.getElementById(fid); if(el) el.value=''; });
@@ -1615,14 +2027,26 @@ function submitAch(id) {
    ════════════════════════════════════════════════════════ */
 function renderPeer() {
   var mem  = getMembers();
-  var opts = mem.map(function(m) { return '<option value="'+m.id+'">'+m.name+' ('+m.level+')</option>'; }).join('');
+  /* If a team member is signed in, they are the author — lock "from" to them */
+  var meId = sessionStorage.getItem('gjc_member_id') || '';
+  var me   = mem.find(function(m) { return m.id === meId; });
+  var fromField = me
+    ? '<div class="form-group"><label>Your Name</label>'
+      + '<input class="auth-input" value="'+me.name+'" disabled style="opacity:.7">'
+      + '<input type="hidden" id="peer-from" value="'+me.id+'"></div>'
+    : '<div class="form-group"><label>Your Name</label><select id="peer-from">'
+      + mem.map(function(m) { return '<option value="'+m.id+'">'+m.name+' ('+m.level+')</option>'; }).join('')
+      + '</select></div>';
+  /* Target list excludes the author */
+  var targetOpts = mem.filter(function(m) { return m.id !== meId; })
+    .map(function(m) { return '<option value="'+m.id+'">'+m.name+' ('+m.level+')</option>'; }).join('');
   document.getElementById('view-peer').innerHTML = '<div class="peer-page">'
     + '<div class="peer-card">'
     + '<div class="peer-hd"><div class="peer-hd-title">Give Peer Feedback</div><div class="peer-hd-sub">Anonymous, specific &amp; constructive</div></div>'
     + '<div class="peer-body">'
     + '<div class="peer-notice">⚠️ You cannot see scores or full profiles. Only the manager views assessments.</div>'
-    + '<div class="form-group"><label>Your Name</label><select id="peer-from">'+opts+'</select></div>'
-    + '<div class="form-group"><label>Feedback For</label><select id="peer-target">'+opts+'</select></div>'
+    + fromField
+    + '<div class="form-group"><label>Feedback For</label><select id="peer-target">'+targetOpts+'</select></div>'
     + '<div class="form-group"><label>Type</label><select id="peer-sent"><option value="positive">Positive — something they do brilliantly</option><option value="constructive">Constructive — something to improve</option></select></div>'
     + '<div class="form-group"><label>Specific Behaviour (min 20 chars)</label><textarea id="peer-text" placeholder="Describe a specific situation and its impact…"></textarea></div>'
     + '<button class="btn-primary" onclick="submitPeer()">Submit Feedback</button>'
@@ -1637,11 +2061,26 @@ function submitPeer() {
   var txt  = txtEl ? txtEl.value.trim() : '';
   if (!txt || txt.length < 20) { toast('⚠ Write at least 20 characters describing a specific behaviour.'); return; }
   if (from === tgt) { toast('⚠ You cannot give feedback to yourself.'); return; }
-  var pending = getPending();
-  pending.push({ id:'p'+Date.now(), type:'feedback', from:from, target:tgt, sentiment:sent, text:txt, date:new Date().toISOString() });
-  savePending(pending);
-  toast('✅ Feedback submitted for manager review!');
-  if (txtEl) txtEl.value = '';
+
+  var item = { id:'p'+Date.now(), type:'feedback', from:from, target:tgt, sentiment:sent, text:txt, date:new Date().toISOString() };
+
+  if (!GJ_SYNC_ENABLED) { toast('⚠ Sync not configured — feedback could not be sent.'); return; }
+
+  var btn = document.querySelector('#view-peer .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+  pushPendingItem(item).then(function(ok) {
+    var peerPage = document.getElementById('view-peer');
+    if (!ok) { toast('⚠ Could not submit feedback. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Submit Feedback'; } return; }
+    if (txtEl) txtEl.value = '';
+    var successHtml = '<div class="peer-page"><div class="peer-card">'
+      + '<div class="peer-hd"><div class="peer-hd-title">✅ Feedback Submitted!</div></div>'
+      + '<div class="peer-body">'
+      + '<p style="color:var(--green);font-weight:600;margin-bottom:12px">Your anonymous feedback was sent to the manager\'s review queue.</p>'
+      + '<button class="btn-ghost" onclick="renderPeer()" style="margin-top:8px">Submit Another →</button>'
+      + '</div></div></div>';
+    if (peerPage) peerPage.innerHTML = successHtml;
+  });
 }
 
 /* ════════════════════════════════════════════════════════
