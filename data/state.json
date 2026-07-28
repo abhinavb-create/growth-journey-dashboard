@@ -1380,6 +1380,12 @@
           "text": "Grown well, but yet reporting breaks at multiple instance on GMV & Competition data sync. Leading to offsetting numbers on POD dashboard.",
           "date": "2026-07-28T06:55:17.890Z"
         }
+      ],
+      "comms": [
+        {
+          "text": "Good at it, however do have misses over email ; which leads to escalation in certain cases.",
+          "date": "2026-07-28T06:59:08.974Z"
+        }
       ]
     }
   },
@@ -1423,5 +1429,5 @@
       ]
     }
   },
-  "_ts": 1785221717892
+  "_ts": 1785221948976
 }
