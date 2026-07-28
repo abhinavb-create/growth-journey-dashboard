@@ -1426,6 +1426,12 @@
           "text": "As an associate manager, Management on client specific issues/request + team related concerns needs to addressed better. \nEg ; Muni Broking & Trackk constant nudge on pricing",
           "date": "2026-07-28T07:23:04.180Z"
         }
+      ],
+      "ai": [
+        {
+          "text": "Haven't scaled or built any automation directly or indirectly for own-self & team",
+          "date": "2026-07-28T07:23:41.330Z"
+        }
       ]
     }
   },
@@ -1469,5 +1475,5 @@
       ]
     }
   },
-  "_ts": 1785223384183
+  "_ts": 1785223421331
 }
