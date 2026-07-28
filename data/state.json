@@ -1554,6 +1554,12 @@
           "text": "Growing, this owed to POS to PG transition.",
           "date": "2026-07-28T08:54:59.668Z"
         }
+      ],
+      "xfunc": [
+        {
+          "text": "Yet to scale and utilize cross-functional alignments with other POD ; Owed to POS to PG transition",
+          "date": "2026-07-28T08:57:43.454Z"
+        }
       ]
     }
   },
@@ -1628,5 +1634,5 @@
       ]
     }
   },
-  "_ts": 1785229010221
+  "_ts": 1785229063457
 }
