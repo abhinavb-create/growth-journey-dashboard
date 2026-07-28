@@ -1616,8 +1616,17 @@
           "ref": "",
           "date": "2026-07-28T08:54:26.403Z"
         }
+      ],
+      "ai": [
+        {
+          "id": "h1785229010218",
+          "text": "Have build a slack channel to track Inbound funnel for Startup",
+          "type": "client",
+          "ref": "https://join.slack.com/share/enQtMTE2NzQyMzgyOTgxOTktY2I0ZTdmY2ZjZGJkZTMxODM3Y2UzZTdhMmMxZjZlOTM1MGQ2YjMwYTZmN2NmODk4MzhlNmY3OTY2YTRhOWFjNg",
+          "date": "2026-07-28T08:56:50.218Z"
+        }
       ]
     }
   },
-  "_ts": 1785228899671
+  "_ts": 1785229010221
 }
