@@ -7,18 +7,5 @@
     "sentiment": "positive",
     "text": "Mary has been a dependable and proactive member of the team. She consistently ensures that operational processes run smoothly and is always willing to support the team whenever required.\n\nShe is approachable, responsive, and quick to resolve operational issues, which helps minimise blockers and enables the team to focus on execution. Her coordination across different stakeholders and attention to detail have made day-to-day operations much more efficient.\n\nOverall, Mary has made a meaningful contribution to the team's success through her strong operational support, collaboration, and commitment to delivering high-quality work.",
     "date": "2026-07-28T07:07:55.075Z"
-  },
-  {
-    "id": "p1785224589897",
-    "type": "achievement",
-    "target": "m3",
-    "from": "m3",
-    "category": "Process Improvement",
-    "skillKey": "sales",
-    "selfRating": 4,
-    "impact": "Aligned OPO to dial with Incubation data, as the relative response rate on those was higher and connectivity was about 25%, way higher than the general startup list which connectivity %of less 1% \n\nThis impacted creating a strong BOFU of 6 MTUs and 22 scheduled meetings, with only 95 as the base for \"Startup Bihar Cohort Only\"",
-    "text": "This was A/B testing to check relative improvement in the funnel for Incubation, as we are constrained on resources and we had to scale this specific inflow on leads.",
-    "ref": "",
-    "date": "2026-07-28T07:43:09.897Z"
   }
 ]
