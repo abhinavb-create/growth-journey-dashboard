@@ -461,6 +461,36 @@
           "comments": {},
           "overall": 72,
           "source": "manual"
+        },
+        {
+          "date": "2026-07-28T09:06:56.205Z",
+          "skills": {
+            "sales": 95,
+            "reporting": 60,
+            "maturity": 98,
+            "independence": 98,
+            "ai": 19,
+            "xfunc": 98,
+            "escalation": 5,
+            "comms": 97,
+            "enthusiasm": 81
+          },
+          "leadership": {
+            "people": 73,
+            "vision": 39,
+            "stakeholder": 80,
+            "developing": 93,
+            "resilience": 85,
+            "decision": 59
+          },
+          "note": "Achievement approved: Process Improvement",
+          "comments": {
+            "ldr_people": "Team appreciates the leadership style and finds it comforting owing to practical approach",
+            "ldr_vision": "Startup as charter is high energy and require fast momentum to grab and close lead ; Need to improve the vision by enabling to turn-around more MTUs",
+            "ldr_decision": "Yet to grow on decision making, how & what to prioritize is still pending."
+          },
+          "overall": 72,
+          "source": "manual"
         }
       ]
     },
@@ -1128,6 +1158,34 @@
           },
           "overall": 69,
           "source": "manual"
+        },
+        {
+          "date": "2026-07-28T09:09:48.621Z",
+          "skills": {
+            "sales": 71,
+            "reporting": 79,
+            "maturity": 85,
+            "independence": 62,
+            "ai": 72,
+            "xfunc": 66,
+            "escalation": 22,
+            "comms": 91,
+            "enthusiasm": 96
+          },
+          "leadership": {
+            "people": 60,
+            "vision": 75,
+            "stakeholder": 50,
+            "developing": 50,
+            "resilience": 75,
+            "decision": 37
+          },
+          "note": "",
+          "comments": {
+            "ldr_decision": "Need to refine this exponentially, as yet the decision to move forward and change strategy comes in late."
+          },
+          "overall": 70,
+          "source": "manual"
         }
       ]
     },
@@ -1684,7 +1742,18 @@
           "date": "2026-07-28T08:56:50.218Z"
         }
       ]
+    },
+    "m4": {
+      "sales": [
+        {
+          "id": "h1785229848654",
+          "text": "Gullylabs [Won them from Gokwik + Magic]",
+          "type": "client",
+          "ref": "",
+          "date": "2026-07-28T09:10:48.654Z"
+        }
+      ]
     }
   },
-  "_ts": 1785229468622
+  "_ts": 1785229848656
 }
