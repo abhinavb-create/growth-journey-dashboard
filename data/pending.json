@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "p1785246958063",
+    "type": "achievement",
+    "target": "m1",
+    "from": "m1",
+    "category": "Brand/Deal",
+    "skillKey": "reporting",
+    "selfRating": 5,
+    "impact": "It definately have Improved Data Accuracy and Reporting Quality to the maximum level Possible along with actually helping me gain better and deeper Understanding of Churn Reasons, along with that it also help me built a better and stronger follow-up process",
+    "text": "I have consistently maintained my reporting and tracking sheet by updating daily call activities, monitoring data accuracy, and ensuring that all lead stages are correctly recorded based on discussions with merchants.\n\nFor merchants who were marked as \"Not Interested,\" I proactively reconnected with them to better understand the reasons behind their decision to discontinue using Razorpay and their reluctance to return. During these conversations, I also explored whether there were any concerns or challenges that we could address to improve their overall experience with Razorpay.\n\nIn cases where merchants remained uninterested and did not provide a specific reason for their decision, I escalated those leads to Gauri, who manages churn revival, for a second level of follow-up. This ensured that every lead was validated appropriately and that all fields in my tracking sheet were updated accurately, without any incorrect or incomplete inputs.",
+    "ref": "",
+    "date": "2026-07-28T13:55:58.063Z"
+  }
+]
