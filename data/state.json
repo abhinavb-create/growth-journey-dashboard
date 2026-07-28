@@ -1548,6 +1548,12 @@
           "text": "Growing on PG sales, yet to scale on GMV focused brands.",
           "date": "2026-07-28T08:54:04.768Z"
         }
+      ],
+      "independence": [
+        {
+          "text": "Growing, this owed to POS to PG transition.",
+          "date": "2026-07-28T08:54:59.668Z"
+        }
       ]
     }
   },
@@ -1613,5 +1619,5 @@
       ]
     }
   },
-  "_ts": 1785228866405
+  "_ts": 1785228899671
 }
