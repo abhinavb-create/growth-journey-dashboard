@@ -409,6 +409,32 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-07-28T07:34:36.370Z",
+          "skills": {
+            "sales": 91,
+            "reporting": 54,
+            "maturity": 98,
+            "independence": 98,
+            "ai": 19,
+            "xfunc": 98,
+            "escalation": 5,
+            "comms": 97,
+            "enthusiasm": 81
+          },
+          "leadership": {
+            "people": 73,
+            "vision": 39,
+            "stakeholder": 80,
+            "developing": 93,
+            "resilience": 85,
+            "decision": 59
+          },
+          "note": "",
+          "comments": {},
+          "overall": 71,
+          "source": "manual"
         }
       ]
     },
@@ -1506,5 +1532,5 @@
       ]
     }
   },
-  "_ts": 1785223799295
+  "_ts": 1785224078670
 }
