@@ -1100,6 +1100,34 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-07-28T08:59:27.422Z",
+          "skills": {
+            "sales": 63,
+            "reporting": 79,
+            "maturity": 85,
+            "independence": 63,
+            "ai": 72,
+            "xfunc": 60,
+            "escalation": 35,
+            "comms": 85,
+            "enthusiasm": 93
+          },
+          "leadership": {
+            "people": 60,
+            "vision": 75,
+            "stakeholder": 50,
+            "developing": 50,
+            "resilience": 75,
+            "decision": 37
+          },
+          "note": "",
+          "comments": {
+            "ldr_decision": "Need to refine this exponentially, as yet the decision to move forward and change strategy comes in late."
+          },
+          "overall": 69,
+          "source": "manual"
         }
       ]
     },
@@ -1561,6 +1589,14 @@
           "date": "2026-07-28T08:57:43.454Z"
         }
       ]
+    },
+    "m3": {
+      "reporting": [
+        {
+          "text": "Broken on document preparation ; steep learning curve on presenting data cuts. Bi-weekly connect haven't had transition on deeper analysis of data.",
+          "date": "2026-07-28T09:02:22.938Z"
+        }
+      ]
     }
   },
   "h": {
@@ -1634,5 +1670,5 @@
       ]
     }
   },
-  "_ts": 1785229063457
+  "_ts": 1785229342940
 }
