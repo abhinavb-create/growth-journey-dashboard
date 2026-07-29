@@ -1,5 +1,5 @@
 {
-  "v": "16",
+  "v": "17",
   "m": [
     {
       "id": "m1",
@@ -11,7 +11,7 @@
       "color": "#2563EB",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -36,7 +36,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -61,7 +61,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -86,7 +86,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -117,12 +117,12 @@
       "name": "Chandel Yajat",
       "level": "A",
       "role": "Associate, Enterprise Sales",
-      "email": "yajat.chandel@razorpay.com",
+      "email": "chandel.yajat@razorpay.com",
       "pod_leader": false,
       "color": "#059669",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -147,7 +147,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -172,7 +172,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -197,7 +197,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -233,7 +233,7 @@
       "color": "#D97706",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -258,7 +258,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -283,7 +283,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -308,7 +308,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -344,7 +344,7 @@
       "color": "#DC2626",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -369,7 +369,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -394,7 +394,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -419,7 +419,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -455,7 +455,7 @@
       "color": "#7C3AED",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -480,7 +480,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -505,7 +505,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -530,7 +530,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -566,7 +566,7 @@
       "color": "#0891B2",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -591,7 +591,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -616,7 +616,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -641,7 +641,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -678,7 +678,7 @@
       "color": "#BE185D",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -703,7 +703,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -728,7 +728,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -753,7 +753,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -778,7 +778,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.068Z",
           "skills": {
             "sales": 22,
             "reporting": 72,
@@ -815,7 +815,7 @@
       "color": "#065F46",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -840,7 +840,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -865,7 +865,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -890,7 +890,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -926,7 +926,7 @@
       "color": "#D97706",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -951,7 +951,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -976,7 +976,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1001,7 +1001,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1037,7 +1037,7 @@
       "color": "#2563EB",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1062,7 +1062,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1087,7 +1087,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1112,7 +1112,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1141,14 +1141,14 @@
     {
       "id": "m11",
       "name": "Gauri Sainath",
-      "level": "A",
-      "role": "Associate, Emerging Business",
+      "level": "AM",
+      "role": "Associate Manager, Emerging Business",
       "email": "gauri.sainath@razorpay.com",
-      "pod_leader": false,
+      "pod_leader": true,
       "color": "#059669",
       "history": [
         {
-          "date": "2026-04-30T12:27:13.362Z",
+          "date": "2026-04-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1173,7 +1173,7 @@
           "overall": 0
         },
         {
-          "date": "2026-05-30T12:27:13.362Z",
+          "date": "2026-05-30T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1198,7 +1198,7 @@
           "overall": 0
         },
         {
-          "date": "2026-06-29T12:27:13.362Z",
+          "date": "2026-06-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1223,7 +1223,7 @@
           "overall": 0
         },
         {
-          "date": "2026-07-29T12:27:13.362Z",
+          "date": "2026-07-29T12:27:41.069Z",
           "skills": {
             "sales": 0,
             "reporting": 0,
@@ -1253,5 +1253,5 @@
   "a": [],
   "c": {},
   "h": {},
-  "_ts": 1785328035897
+  "_ts": 1785328069749
 }
