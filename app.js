@@ -16,7 +16,7 @@
    ═════════════════════════════════════════════════════════ */
 const GOOGLE_CLIENT_ID = '988966755183-sar1mqrhpv8o3hkt0lh4sjrnmir6sqcr.apps.googleusercontent.com';
 const MANAGER_EMAIL    = 'abhinav.b@razorpay.com';   // ← your email
-const DATA_VERSION     = '16';  // bump this whenever seed data changes → auto-clears stale localStorage
+const DATA_VERSION     = '17';  // bump this whenever seed data changes → auto-clears stale localStorage
 
 /* ── FRAMEWORK ───────────────────────────────────────────── */
 const LEVELS      = ['JA','A','SA','AM','M','SM'];
@@ -208,13 +208,36 @@ async function _ghUpdate(path, updateFn, message) {
   await _ghWrite(path, updated, res.sha, message);
 }
 
-/* Manager → push the full dashboard state to the shared backend */
+/* Count scored snapshot entries (overall>0 or any non-zero skill) across members.
+   Used to guard pushState against clobbering a richer remote with an empty local. */
+function _countScored(members) {
+  if (!Array.isArray(members)) return 0;
+  var n = 0;
+  members.forEach(function(m) {
+    (m.history || []).forEach(function(h) {
+      if ((h.overall && h.overall > 0) || (h.skills && Object.keys(h.skills).some(function(k){return h.skills[k] > 0;}))) n++;
+    });
+  });
+  return n;
+}
+
+/* Manager → push the full dashboard state to the shared backend.
+   SAFEGUARD: if the remote has more scored data than local (e.g. this browser
+   was just wiped by a version change), pull remote instead of overwriting it. */
 async function pushState() {
   if (!GJ_SYNC_ENABLED) return;
   if (sessionStorage.getItem('gjc_role') !== 'manager') return;
   try {
     var payload = { v: DATA_VERSION, m: getMembers(), a: getApproved(), c: getCoaching(), h: getHighlights(), _ts: Date.now() };
     var res = await _ghRead(GJ_STATE_PATH);
+    var remoteScored = res.data && res.data.m ? _countScored(res.data.m) : 0;
+    var localScored  = _countScored(payload.m);
+    if (remoteScored > localScored) {
+      console.warn('[sync] pushState aborted: remote has ' + remoteScored + ' scored entries vs local ' + localScored + ' — pulling remote instead.');
+      await pullState();
+      toast('ℹ Synced from shared data (remote was richer than local).');
+      return;
+    }
     await _ghWrite(GJ_STATE_PATH, payload, res.sha, 'state update ' + new Date().toISOString());
   } catch (e) { console.warn('[sync] pushState failed:', e); }
 }
@@ -358,9 +381,14 @@ function initData() {
   /* If a peer feedback link was opened, queue it for manager review */
   importFeedbackFromHash();
 
-  // Auto-clear stale data when DATA_VERSION changes
+  // Auto-clear stale data only on a DATA_VERSION *increase*.
+  // A downgrade (deployed code older than the stored version) must NOT wipe
+  // local data — that's how a stale deploy erased teammates' scores.
   var storedVersion = localStorage.getItem('gjc_data_version');
-  if (storedVersion !== DATA_VERSION) {
+  if (storedVersion && Number(storedVersion) > Number(DATA_VERSION)) {
+    // Remote/local data is newer than this build — pull instead of clearing.
+    pullState();
+  } else if (storedVersion !== DATA_VERSION) {
     localStorage.removeItem('gjc_members');
     localStorage.removeItem('gjc_pending');
     localStorage.removeItem('gjc_approved');
