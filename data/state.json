@@ -2,13 +2,13 @@
   "v": "17",
   "m": [
     {
+      "color": "#2563EB",
       "id": "m1",
       "name": "Anam Imteyaz",
       "level": "JA",
       "role": "Junior Associate, Emerging Business",
       "email": "anam.imteyaz@razorpay.com",
       "pod_leader": false,
-      "color": "#2563EB",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -113,13 +113,13 @@
       ]
     },
     {
+      "color": "#059669",
       "id": "m2",
       "name": "Chandel Yajat",
       "level": "A",
       "role": "Associate, Enterprise Sales",
       "email": "chandel.yajat@razorpay.com",
       "pod_leader": false,
-      "color": "#059669",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -224,13 +224,13 @@
       ]
     },
     {
+      "color": "#D97706",
       "id": "m3",
       "name": "Suman Soumya Dash",
       "level": "AM",
       "role": "Associate Manager, Startup Hunting",
       "email": "suman.dash@razorpay.com",
       "pod_leader": true,
-      "color": "#D97706",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -335,13 +335,13 @@
       ]
     },
     {
+      "color": "#DC2626",
       "id": "m4",
       "name": "Harsha Thomas John",
       "level": "SA",
       "role": "Senior Associate, Emerging Business",
       "email": "harsha.john@razorpay.com",
       "pod_leader": true,
-      "color": "#DC2626",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -446,13 +446,13 @@
       ]
     },
     {
+      "color": "#7C3AED",
       "id": "m5",
       "name": "Kirubhavani B",
       "level": "A",
       "role": "Associate, Inside Sales",
       "email": "kirubhavani.b@razorpay.com",
       "pod_leader": false,
-      "color": "#7C3AED",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -557,13 +557,13 @@
       ]
     },
     {
+      "color": "#0891B2",
       "id": "m6",
       "name": "Nishi Agarwal",
       "level": "AM",
       "role": "Associate Manager, Emerging Business",
       "email": "nishi.agarwal@razorpay.com",
       "pod_leader": true,
-      "color": "#0891B2",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -668,6 +668,7 @@
       ]
     },
     {
+      "color": "#BE185D",
       "id": "m7",
       "name": "Mary L. Pulamte",
       "level": "JA",
@@ -675,7 +676,6 @@
       "email": "mary.pulamte@razorpay.com",
       "pod_leader": false,
       "role_type": "ops",
-      "color": "#BE185D",
       "history": [
         {
           "date": "2026-04-30T12:27:41.068Z",
@@ -806,13 +806,13 @@
       ]
     },
     {
+      "color": "#065F46",
       "id": "m8",
       "name": "Milind Singh Bora",
       "level": "A",
       "role": "Associate, Inside Sales",
       "email": "milind.bora@razorpay.com",
       "pod_leader": true,
-      "color": "#065F46",
       "history": [
         {
           "date": "2026-04-30T12:27:41.069Z",
@@ -917,13 +917,13 @@
       ]
     },
     {
+      "color": "#D97706",
       "id": "m9",
       "name": "Priyanka Pati",
       "level": "A",
       "role": "Associate, Business Development",
       "email": "priyanka.pati@razorpay.com",
       "pod_leader": false,
-      "color": "#D97706",
       "history": [
         {
           "date": "2026-04-30T12:27:41.069Z",
@@ -1028,13 +1028,13 @@
       ]
     },
     {
+      "color": "#2563EB",
       "id": "m10",
       "name": "Prerna Kumari",
       "level": "SA",
       "role": "Senior Associate, Emerging Business",
       "email": "prerna.kumari@razorpay.com",
       "pod_leader": false,
-      "color": "#2563EB",
       "history": [
         {
           "date": "2026-04-30T12:27:41.069Z",
@@ -1139,13 +1139,13 @@
       ]
     },
     {
+      "color": "#059669",
       "id": "m11",
       "name": "Gauri Sainath",
       "level": "AM",
       "role": "Associate Manager, Emerging Business",
       "email": "gauri.sainath@razorpay.com",
       "pod_leader": true,
-      "color": "#059669",
       "history": [
         {
           "date": "2026-04-30T12:27:41.069Z",
@@ -1253,5 +1253,5 @@
   "a": [],
   "c": {},
   "h": {},
-  "_ts": 1785328069749
+  "_ts": 1785328174665
 }
