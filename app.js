@@ -295,7 +295,9 @@ async function pushPendingList() {
 async function syncOnLogin(role) {
   if (!GJ_SYNC_ENABLED) return;
   var loaded = await pullState();
-  if (role === 'manager') await pullPending();
+  /* Members now need the pending queue too — to see achievements the manager
+     returned to them for more details. Manager already pulls it. */
+  if (role === 'manager' || role === 'member') await pullPending();
   if (!loaded && role !== 'manager') return;
   if (role === 'manager')      renderManager();
   else if (role === 'member')  renderMember();
@@ -810,7 +812,14 @@ function handleGoogleCredential(response) {
   }
 }
 
-function afterSignIn(user) {
+async function afterSignIn(user) {
+  /* Pull the shared member list BEFORE role determination. Without this, a
+     browser whose local gjc_members was wiped (e.g. by a DATA_VERSION change)
+     or is stale resolves every non-manager email to 'blocked' — because
+     roleForEmail only checks localStorage. The manager always gets in via the
+     hardcoded MANAGER_EMAIL, which is why members were locked out but the
+     manager wasn't. */
+  if (GJ_SYNC_ENABLED) { try { await pullState(); } catch(e){} }
   var result = roleForEmail(user.email);
   updateHeaderUser(user, result.role);
   applyNavForRole(result.role);
@@ -1609,7 +1618,7 @@ function skillLabelFromKey(key) {
 }
 
 function buildPending() {
-  var p   = getPending();
+  var p   = getPending().filter(function(x) { return x.status !== 'returned'; });
   var mem = getMembers();
   var nm  = {};
   mem.forEach(function(m) { nm[m.id] = m.name; });
@@ -1620,6 +1629,16 @@ function buildPending() {
         var skillLabel = isAch ? skillLabelFromKey(item.skillKey) : '';
         var stars = item.selfRating ? ['','★','★★','★★★','★★★★','★★★★★'][item.selfRating] : '';
         var pts   = item.selfRating ? '+'+ratingToPoints(item.selfRating)+' pts on approval' : '';
+        /* Build the skill <option> list for the manager-editable dropdown, pre-selecting the member's choice */
+        var tgtMem = mem.find(function(m) { return m.id === item.target; }) || null;
+        var mgrSkillOpts = (tgtMem ? memberSkills(tgtMem) : SKILLS).map(function(sk) {
+          return '<option value="'+sk.key+'"'+(sk.key===item.skillKey?' selected':'')+'>'+sk.label+'</option>';
+        }).join('') + LEADERSHIP.map(function(lk) {
+          return '<option value="ldr_'+lk.key+'"'+('ldr_'+lk.key===item.skillKey?' selected':'')+'>'+lk.label+' (Leadership)</option>';
+        }).join('');
+        var catOpts = ['Brand/Deal','AI Initiative','Cross-functional','Process Improvement','Mentoring','Other'].map(function(c) {
+          return '<option'+(c===item.category?' selected':'')+'>'+c+'</option>';
+        }).join('');
 
         return '<div class="pending-item" id="pi-'+item.id+'">'
           + '<div class="p-icon">'+(isAch?'🏅':'💬')+'</div>'
@@ -1634,18 +1653,26 @@ function buildPending() {
           + (isAch && item.ref ? '<div class="p-ref">📎 <a href="'+item.ref+'" target="_blank">'+item.ref+'</a></div>' : '')
           + (isAch && pts ? '<div class="p-pts">'+pts+' to <em>'+skillLabel+'</em></div>' : '')
           + '<div class="p-meta">'+fmt(item.date)+'</div>'
-          /* Manager editable rating override */
-          + (isAch ? '<div class="p-edit-row">'
-          +   '<label style="font-size:11px;font-weight:600">Adjust rating before approving: </label>'
+          /* Manager editable fields: category, skill/competency, rating, + push-back comment */
+          + (isAch ? '<div class="p-edit-row" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08)">'
+          +   '<div style="display:flex;gap:10px;flex-wrap:wrap">'
+          +     '<div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Category</label><select id="mgr-cat-'+item.id+'" style="font-size:12px;padding:3px 6px">'+catOpts+'</select></div>'
+          +     '<div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Skill / Competency</label><select id="mgr-skill-'+item.id+'" style="font-size:12px;padding:3px 6px"><option value="">— Select —</option>'+mgrSkillOpts+'</select></div>'
+          +   '</div>'
+          +   '<div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Adjust rating before approving: </label>'
           +   '<div class="star-row" id="mgr-star-'+item.id+'">'
           +   [1,2,3,4,5].map(function(n) {
                 return '<button type="button" class="star-btn'+(n<=(item.selfRating||0)?' active':'')+'" data-val="'+n+'" onclick="setMgrStar(\''+item.id+'\','+n+')">★</button>';
               }).join('')
           +   '</div><input type="hidden" id="mgr-rating-'+item.id+'" value="'+(item.selfRating||0)+'">'
+          +   '</div>'
+          +   '<div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Request more details (optional — sends back to member):</label>'
+          +   '<textarea id="mgr-comment-'+item.id+'" rows="2" placeholder="e.g. Add the exact deal size and which merchant..." style="width:100%;font-size:12px;padding:6px;border:1px solid var(--border,rgba(0,0,0,.15));border-radius:6px"></textarea></div>'
           + '</div>' : '')
           + '</div>'
           + '<div class="p-actions">'
           + '<button class="btn-sm btn-approve" onclick="approveItem(\''+item.id+'\')">✓ Approve</button>'
+          + (isAch ? '<button class="btn-sm" style="background:#D97706;color:#fff" onclick="returnItem(\''+item.id+'\')">↩ Request details</button>' : '')
           + '<button class="btn-sm btn-remove"  onclick="removeItem(\''+item.id+'\')">✕ Reject</button>'
           + '</div></div>';
       }).join('')
@@ -1679,8 +1706,12 @@ function approveItem(pid) {
   for (var i = 0; i < p.length; i++) { if (p[i].id === pid) { item = p[i]; break; } }
   if (!item) return;
 
-  /* Read manager-adjusted rating if present */
+  /* Read manager-adjusted category / skill / rating if present */
+  var mgrCatEl   = document.getElementById('mgr-cat-'+pid);
+  var mgrSkillEl = document.getElementById('mgr-skill-'+pid);
   var mgrRatingEl = document.getElementById('mgr-rating-'+pid);
+  if (mgrCatEl && mgrCatEl.value)   item.category = mgrCatEl.value;
+  if (mgrSkillEl && mgrSkillEl.value) item.skillKey = mgrSkillEl.value;
   if (mgrRatingEl && mgrRatingEl.value) item.selfRating = parseInt(mgrRatingEl.value) || item.selfRating;
 
   /* Apply score points to member's latest snapshot */
@@ -1745,6 +1776,35 @@ function approveItem(pid) {
 function removeItem(pid) {
   savePending(getPending().filter(function(x) { return x.id !== pid; }));
   buildPending(); toast('🗑 Rejected');
+  pushPendingList();
+}
+
+/* Manager → return a pending achievement to the member (POC) for more details.
+   The item stays in the shared pending queue with status:'returned' + mgrComment,
+   so the member sees it in their "Returned for details" section and can re-submit. */
+function returnItem(pid) {
+  var p = getPending();
+  var item = null, idx = -1;
+  for (var i = 0; i < p.length; i++) { if (p[i].id === pid) { item = p[i]; idx = i; break; } }
+  if (!item) return;
+  /* Read the manager's comment (required) + any edited category/skill/rating so
+     the member sees the manager's suggested corrections alongside the request. */
+  var cEl  = document.getElementById('mgr-comment-'+pid);
+  var comment = cEl ? cEl.value.trim() : '';
+  if (!comment) { toast('⚠ Add a note telling the member what details to add.'); cEl && cEl.focus(); return; }
+  var catEl   = document.getElementById('mgr-cat-'+pid);
+  var skillEl = document.getElementById('mgr-skill-'+pid);
+  var ratingEl = document.getElementById('mgr-rating-'+pid);
+  if (catEl && catEl.value)     item.category = catEl.value;
+  if (skillEl && skillEl.value) item.skillKey = skillEl.value;
+  if (ratingEl && ratingEl.value) item.selfRating = parseInt(ratingEl.value) || item.selfRating;
+  item.status = 'returned';
+  item.mgrComment = comment;
+  item.returnedDate = new Date().toISOString();
+  p[idx] = item;
+  savePending(p);
+  buildPending();
+  toast('↩ Sent back to '+(item.target)+' for more details.');
   pushPendingList();
 }
 
@@ -1974,6 +2034,32 @@ function renderMbrDash(el, m, managerPreview) {
         }).join('');
         return '<div class="mbr-card"><div class="mbr-card-hd">Peer Feedback <span style="font-size:12px;font-weight:400;color:var(--muted)">('+fbs.length+' received)</span></div><div class="mbr-card-body">'+sentBar+fbHtml+'</div></div>';
       })()
+    /* Returned for details — achievements the manager kicked back (member view only) */
+    + (function() {
+        if (managerPreview) return '';
+        var returned = getPending().filter(function(x) {
+          return x.type === 'achievement' && x.status === 'returned' && x.target === m.id;
+        });
+        if (!returned.length) return '';
+        var cards = returned.map(function(r) {
+          var rSkill = skillLabelFromKey(r.skillKey);
+          return '<div class="ach-card" style="border:1px solid #D97706;background:rgba(217,119,6,.05)">'
+            + '<div class="ach-card-top"><span class="ach-cat" style="background:#D97706;color:#fff">↩ Returned for details</span>'
+            + (rSkill ? '<span class="ach-skill-tag">'+rSkill+'</span>' : '')
+            + (r.selfRating ? '<span class="ach-rating">'+['','★','★★','★★★','★★★★','★★★★★'][r.selfRating||0]+'</span>' : '') + '</div>'
+            + '<div class="ach-impact" style="background:rgba(217,119,6,.1);padding:8px 10px;border-radius:6px;margin:6px 0"><strong>Manager note:</strong> '+escHtml(r.mgrComment||'')+'</div>'
+            + '<div class="ach-detail">'+r.text+'</div>'
+            + (r.impact ? '<div class="ach-impact"><strong>Your impact note:</strong> '+r.impact+'</div>' : '')
+            + '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Add the requested details and re-send:</div>'
+            + '<div class="ach-form" style="margin-top:8px">'
+            + '<div class="form-group"><label>Add details / clarify</label><textarea id="ret-text-'+r.id+'" rows="3" placeholder="Add the details the manager asked for...">'+escHtml(r.text)+'</textarea></div>'
+            + '<div class="form-group"><label>Impact — update if needed</label><textarea id="ret-impact-'+r.id+'" rows="2">'+escHtml(r.impact||'')+'</textarea></div>'
+            + '<div class="form-group"><label>Reference / Link (optional)</label><input type="text" id="ret-ref-'+r.id+'" value="'+escHtml(r.ref||'')+'"></div>'
+            + '<button class="btn-primary" onclick="resubmitReturned(\''+r.id+'\')">↻ Re-send to manager</button>'
+            + '</div></div>';
+        }).join('');
+        return '<div class="mbr-card"><div class="mbr-card-hd">Returned for Details <span class="badge-cnt" style="background:#D97706">'+returned.length+'</span></div><div class="mbr-card-body">'+cards+'</div></div>';
+      })()
     /* Log achievement — rich form (hidden in manager preview) */
     + (!managerPreview ? '<div class="mbr-card"><div class="mbr-card-hd">Log Achievement</div><div class="mbr-card-body">'
     + '<div class="ach-form">'
@@ -2048,6 +2134,38 @@ function submitAch(id) {
   var re=document.getElementById('ach-rating'); if(re) re.value='0';
   document.querySelectorAll('.star-btn').forEach(function(b){b.classList.remove('active');});
   var sk=document.getElementById('ach-skill'); if(sk) sk.value='';
+}
+
+/* Member → re-send an achievement the manager returned for more details.
+   Updates the same pending item in place (keeps manager's category/skill/rating
+   edits), clears the 'returned' status, and pushes the queue so the manager
+   sees it back in their approval queue. */
+function resubmitReturned(rid) {
+  var textEl   = document.getElementById('ret-text-'+rid);
+  var impactEl = document.getElementById('ret-impact-'+rid);
+  var refEl    = document.getElementById('ret-ref-'+rid);
+  var text   = textEl   ? textEl.value.trim()   : '';
+  var impact = impactEl ? impactEl.value.trim() : '';
+  var ref    = refEl    ? refEl.value.trim()    : '';
+  if (!text) { toast('⚠ Please add the requested details.'); textEl && textEl.focus(); return; }
+
+  var p = getPending();
+  var item = null, idx = -1;
+  for (var i = 0; i < p.length; i++) { if (p[i].id === rid) { item = p[i]; idx = i; break; } }
+  if (!item) { toast('⚠ This item is no longer in your queue.'); renderMember(); return; }
+  item.text = text;
+  if (impact) item.impact = impact;
+  if (ref)    item.ref = ref;
+  item.status = 'pending';
+  delete item.mgrComment;
+  delete item.returnedDate;
+  item.resubmittedDate = new Date().toISOString();
+  item.date = item.resubmittedDate;
+  p[idx] = item;
+  savePending(p);
+  pushPendingList();
+  toast('↻ Re-sent to manager for approval.');
+  renderMember();
 }
 
 /* ════════════════════════════════════════════════════════
