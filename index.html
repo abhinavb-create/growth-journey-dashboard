@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=1785394326">
 </head>
 <body>
 <div id="app">
@@ -15,29 +14,46 @@
     <div class="brand">
       <div class="brand-mark">GJ</div>
       <div>
-        <div class="brand-eyebrow">People Framework · V3</div>
+        <div class="brand-eyebrow">People Framework &middot; V3</div>
         <div class="brand-name">Growth Journey Calculator</div>
       </div>
     </div>
     <nav class="topnav">
-      <button class="nav-btn active" id="tab-manager"  onclick="setRole('manager')">📊 Manager</button>
-      <button class="nav-btn"        id="tab-member"   onclick="setRole('member')">🙋 Member</button>
-      <button class="nav-btn"        id="tab-peer"     onclick="setRole('peer')">💬 Peer</button>
-      <button class="nav-btn"        id="tab-workflow" onclick="setRole('workflow')">🗺 Workflow</button>
+      <button class="nav-btn active" id="tab-manager"  onclick="setRole('manager')">&#128202; Manager</button>
+      <button class="nav-btn"        id="tab-member"   onclick="setRole('member')">&#128590; Member</button>
+      <button class="nav-btn"        id="tab-peer"     onclick="setRole('peer')">&#128172; Peer</button>
+      <button class="nav-btn"        id="tab-mgr-feedback" onclick="setRole('mgr-feedback')">&#128221; Mgr Feedback</button>
+      <button class="nav-btn"        id="tab-workflow" onclick="setRole('workflow')">&#128506; Workflow</button>
     </nav>
     <div class="header-user" id="header-user"></div>
   <button class="ai-toggle-btn" id="ai-toggle-btn" onclick="toggleAIScoring()" title="Toggle AI-derived scores">
-    🤖 AI Scoring: <span id="ai-toggle-label">ON</span>
+    &#129302; AI Scoring: <span id="ai-toggle-label">ON</span>
   </button>
   </header>
-  <div id="view-manager" class="view"></div>
-  <div id="view-member"  class="view" style="display:none"></div>
-  <div id="view-peer"    class="view" style="display:none"></div>
-  <div id="view-workflow"class="view" style="display:none"></div>
+  <div id="view-manager"  class="view"></div>
+  <div id="view-member"   class="view" style="display:none"></div>
+  <div id="view-peer"     class="view" style="display:none"></div>
+  <div id="view-mgr-feedback" class="view" style="display:none"></div>
+  <div id="view-workflow" class="view" style="display:none"></div>
 </div>
 <div id="toast"></div>
 <script>window.AI_SCORES = window.AI_SCORES || {};</script>
-<script src="analyser/ai_scores.js" onerror="console.log('No AI scores yet — run analyser/analyser.py to generate them.')"></script>
-<script src="app.js?v=1785394326"></script>
+<script>
+/* ── Dynamic asset loading with cache-bust ── */
+(function(){
+  var t = Date.now();
+  var s = document.createElement('link');
+  s.rel = 'stylesheet';
+  s.href = 'styles.css?v=' + t;
+  document.head.appendChild(s);
+  var a = document.createElement('script');
+  a.src = 'analyser/ai_scores.js';
+  a.onerror = function(){ console.log('No AI scores yet -- run analyser/analyser.py to generate them.'); };
+  document.body.appendChild(a);
+  var x = document.createElement('script');
+  x.src = 'app.js?v=' + t;
+  document.body.appendChild(x);
+})();
+</script>
 </body>
 </html>
