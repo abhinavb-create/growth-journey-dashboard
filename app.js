@@ -711,15 +711,17 @@ function periodAvgSkill(member, skillKey) {
 
 /* ── ROUTER ─────────────────────────────────────────────── */
 function setRole(role) {
-  ['manager','member','peer','workflow'].forEach(function(r) {
-    document.getElementById('view-'+r).style.display = r===role?'':'none';
+  ['manager','member','peer','mgr-feedback','workflow'].forEach(function(r) {
+    var v = document.getElementById('view-'+r);
+    if (v) v.style.display = r===role?'':'none';
     var tab = document.getElementById('tab-'+r);
     if (tab) tab.classList.toggle('active', r===role);
   });
-  if (role==='manager')  renderManager();
-  if (role==='member')   renderMember();
-  if (role==='peer')     renderPeer();
-  if (role==='workflow') renderWorkflow();
+  if (role==='manager')      renderManager();
+  if (role==='member')       renderMember();
+  if (role==='peer')         renderPeer();
+  if (role==='mgr-feedback') renderMgrFeedback();
+  if (role==='workflow')     renderWorkflow();
 }
 
 /* ── TOAST ──────────────────────────────────────────────── */
@@ -2226,6 +2228,56 @@ function submitPeer() {
       + '<button class="btn-ghost" onclick="renderPeer()" style="margin-top:8px">Submit Another →</button>'
       + '</div></div></div>';
     if (peerPage) peerPage.innerHTML = successHtml;
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   ANONYMOUS MANAGER FEEDBACK (from member view, no manager tab)
+   ════════════════════════════════════════════════════════ */
+function renderMgrFeedback() {
+  var mem = getMembers();
+  var meId = sessionStorage.getItem('gjc_member_id') || '';
+  var me = meId ? mem.find(function(m) { return m.id === meId; }) : null;
+  var fromField = me
+    ? '<div class="form-group"><label>Your Name</label><input class="auth-input" value="'+me.name+'" disabled style="opacity:.7"><input type="hidden" id="mgr-fb-from" value="'+me.id+'"></div>'
+    : '<div class="form-group"><label>Your Name</label><select id="mgr-fb-from">' + mem.map(function(m) { return '<option value="'+m.id+'">'+m.name+'</option>'; }).join('') + '</select></div>';
+  var targetOpts = mem.filter(function(m) { return m.id !== meId; })
+    .map(function(m) { return '<option value="'+m.id+'">'+m.name+' ('+m.level+')</option>'; }).join('');
+  document.getElementById('view-mgr-feedback').innerHTML = '<div class="peer-page">'
+    + '<div class="peer-card">'
+    + '<div class="peer-hd"><div class="peer-hd-title">Give Manager Feedback</div><div class="peer-hd-sub">Anonymous, specific & constructive — goes to the member directly</div></div>'
+    + '<div class="peer-body">'
+    + '<div class="peer-notice">&#9888; This feedback is about your manager, not a peer. Only the manager will see it (not shared in team dashboard).</div>'
+    + fromField
+    + '<div class="form-group"><label>Feedback For</label><select id="mgr-fb-target">'+targetOpts+'</select></div>'
+    + '<div class="form-group"><label>Type</label><select id="mgr-fb-sent"><option value="positive">Positive — something they do brilliantly</option><option value="constructive">Constructive — something to improve</option></select></div>'
+    + '<div class="form-group"><label>Specific Behaviour (min 20 chars)</label><textarea id="mgr-fb-text" placeholder="Describe a specific situation and its impact..."></textarea></div>'
+    + '<button class="btn-primary" onclick="submitMgrFeedback()">Submit Manager Feedback</button>'
+    + '</div></div></div>';
+}
+function submitMgrFeedback() {
+  var from = document.getElementById('mgr-fb-from') ? document.getElementById('mgr-fb-from').value : '';
+  var tgt  = document.getElementById('mgr-fb-target') ? document.getElementById('mgr-fb-target').value : '';
+  var sent = document.getElementById('mgr-fb-sent') ? document.getElementById('mgr-fb-sent').value : '';
+  var txtEl = document.getElementById('mgr-fb-text');
+  var txt  = txtEl ? txtEl.value.trim() : '';
+  if (!txt || txt.length < 20) { toast('&#9888; Write at least 20 characters describing a specific behaviour.'); return; }
+  if (from === tgt) { toast('&#9888; You cannot give feedback to yourself.'); return; }
+  var item = { id:'mf'+Date.now(), type:'mgr_feedback', from:from, target:tgt, sentiment:sent, text:txt, date:new Date().toISOString() };
+  if (!GJ_SYNC_ENABLED) { toast('&#9888; Sync not configured — feedback could not be sent.'); return; }
+  var btn = document.querySelector('#view-mgr-feedback .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+  pushPendingItem(item).then(function(ok) {
+    var page = document.getElementById('view-mgr-feedback');
+    if (!ok) { toast('&#9888; Could not submit feedback. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Submit Manager Feedback'; } return; }
+    if (txtEl) txtEl.value = '';
+    var success = '<div class="peer-page"><div class="peer-card">'
+      + '<div class="peer-hd"><div class="peer-hd-title">&#9989; Feedback Submitted!</div></div>'
+      + '<div class="peer-body">'
+      + '<p style="color:var(--green);font-weight:600;margin-bottom:12px">Your anonymous manager feedback was sent.</p>'
+      + '<button class="btn-ghost" onclick="renderMgrFeedback()" style="margin-top:8px">Submit Another &#8594;</button>'
+      + '</div></div></div>';
+    if (page) page.innerHTML = success;
   });
 }
 
