@@ -989,7 +989,7 @@
             "resilience": 0,
             "decision": 0
           },
-          "note": "Manual baseline \u2014 Ops resource. Best structured communicator on team. AI adoption coaching target.",
+          "note": "Manual baseline — Ops resource. Best structured communicator on team. AI adoption coaching target.",
           "comments": {},
           "source": "manual",
           "overall": 44
@@ -1015,7 +1015,7 @@
             "resilience": 0,
             "decision": 0
           },
-          "note": "Manual baseline \u2014 Ops resource. Best structured communicator on team. AI adoption coaching target.",
+          "note": "Manual baseline — Ops resource. Best structured communicator on team. AI adoption coaching target.",
           "comments": {},
           "overall": 79,
           "source": "manual"
@@ -1708,7 +1708,7 @@
         },
         {
           "id": "h1785149668285",
-          "text": "Created an Automated workflow for MCC request \u2197",
+          "text": "Created an Automated workflow for MCC request ↗",
           "type": "process",
           "ref": "https://docs.google.com/spreadsheets/d/1iN4MYc_xa6V%E2%80%A6/edit?gid=0#gid=0",
           "date": "2026-07-27T10:54:28.285Z"
@@ -1730,7 +1730,7 @@
       "sales": [
         {
           "id": "ha1785224658687",
-          "text": "Process Improvement \u2014 Aligned OPO to dial with Incubation data, as the relative re\u2026",
+          "text": "Process Improvement — Aligned OPO to dial with Incubation data, as the relative re…",
           "type": "achievement",
           "ref": "",
           "date": "2026-07-28T07:44:18.687Z"
@@ -1769,5 +1769,5 @@
       ]
     }
   },
-  "_ts": 1785302319593
+  "_ts": 1785408131799
 }
