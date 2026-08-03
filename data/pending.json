@@ -14,18 +14,5 @@
     "status": "returned",
     "mgrComment": "Can you give me details ; Total email lined up, how many sent, how many we have received and what funnel they have moved to?",
     "returnedDate": "2026-07-30T08:55:57.968Z"
-  },
-  {
-    "id": "p1785247661567",
-    "type": "achievement",
-    "target": "m1",
-    "from": "m1",
-    "category": "Other",
-    "skillKey": "sales",
-    "selfRating": 5,
-    "impact": "Within the first week of launching the campaign, we received responses from 2 out of the 15 merchants who were contacted through the automated email sequence, resulting in a 10% response rate. Both responses were positive, and after addressing the merchants' specific requirements, we were successfully able to close both opportunities. These early outcomes demonstrate the effectiveness of the initiative in re-engaging previously unresponsive merchants and highlight the value of incorporating automated email outreach into our churn revival strategy. \n\nhave attahced one such email thread for your referal",
-    "text": "A significant number of merchants in my lead sheet consistently fell under the \"Did Not Pick\" (DNP) or \"Did Not Answer\" category. As part of my regular follow-up process, I shared WhatsApp messages with these merchants after unsuccessful call attempts. However, the response rate through WhatsApp remained minimal.\n\nTo improve merchant engagement, I proposed and initiated an automated email campaign targeting these DNP merchants. The objective was to evaluate whether structured email follow-ups could generate responses from merchants who were unresponsive through calls and WhatsApp. This campaign was my initiative, and Vamsee supported me in implementing it successfully.\n\nWithin a week of launching the campaign, we began receiving email responses from merchants who had previously been unreachable through other communication channels. The early results indicate that the campaign has been effective in increasing merchant engagement and has introduced an additional outreach channel that complements our existing follow-up process.",
-    "ref": "https://drive.google.com/drive/folders/19-Ecgd-ux2G7YfdS8JXRyF_xRxO_SEc6?usp=drive_link",
-    "date": "2026-07-28T14:07:41.567Z"
   }
 ]
