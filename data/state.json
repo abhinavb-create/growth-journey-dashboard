@@ -144,7 +144,7 @@
       "name": "Chandel Yajat",
       "level": "A",
       "role": "Associate, Enterprise Sales",
-      "email": "chandel.yajat@razorpay.com",
+      "email": "yajat.chandel@razorpay.com",
       "pod_leader": false,
       "history": [
         {
@@ -602,8 +602,40 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-08-03T07:47:14.233Z",
+          "skills": {
+            "sales": 0,
+            "reporting": 0,
+            "maturity": 0,
+            "independence": 0,
+            "ai": 0,
+            "xfunc": 0,
+            "escalation": 0,
+            "comms": 0,
+            "enthusiasm": 0
+          },
+          "leadership": {
+            "people": 0,
+            "vision": 0,
+            "stakeholder": 0,
+            "developing": 0,
+            "resilience": 0,
+            "decision": 0
+          },
+          "note": "",
+          "comments": {},
+          "overall": 0,
+          "source": "manual"
         }
-      ]
+      ],
+      "quarters": {
+        "q1": {
+          "pct": 103,
+          "note": ""
+        }
+      }
     },
     {
       "color": "#7C3AED",
@@ -853,10 +885,47 @@
             "ldr_stakeholder": "Team has feedback on dominant leadership style with notes on not assisting rather pushing the team.",
             "ldr_developing": "Haven't grown team quotient by helping the team on specific skills-set on sales or AI ; Like a industry specific hunting sheet or wishlist"
           },
-          "overall": 64,
+          "overall": 63,
+          "source": "manual"
+        },
+        {
+          "date": "2026-08-03T07:47:45.230Z",
+          "skills": {
+            "sales": 86,
+            "reporting": 74,
+            "maturity": 68,
+            "independence": 89,
+            "ai": 5,
+            "xfunc": 87,
+            "escalation": 6,
+            "comms": 92,
+            "enthusiasm": 85
+          },
+          "leadership": {
+            "people": 49,
+            "vision": 70,
+            "stakeholder": 45,
+            "developing": 40,
+            "resilience": 80,
+            "decision": 70
+          },
+          "note": "",
+          "comments": {
+            "ldr_people": "Team has mixed overview on leadership style; well aware on team numbers & has fundamentally grown the team numbers however yet to improve on team inclusiveness.",
+            "ldr_vision": "Aligned on the team's goal for achieving quarter numbers by ensuring the team's average growing.",
+            "ldr_stakeholder": "Team has feedback on dominant leadership style with notes on not assisting rather pushing the team.",
+            "ldr_developing": "Haven't grown team quotient by helping the team on specific skills-set on sales or AI ; Like a industry specific hunting sheet or wishlist"
+          },
+          "overall": 63,
           "source": "manual"
         }
-      ]
+      ],
+      "quarters": {
+        "q1": {
+          "pct": 65,
+          "note": ""
+        }
+      }
     },
     {
       "color": "#BE185D",
@@ -1156,7 +1225,7 @@
           "comments": {
             "ldr_decision": "Need to refine this exponentially, as yet the decision to move forward and change strategy comes in late."
           },
-          "overall": 69,
+          "overall": 65,
           "source": "manual"
         },
         {
@@ -1184,7 +1253,7 @@
           "comments": {
             "ldr_decision": "Need to refine this exponentially, as yet the decision to move forward and change strategy comes in late."
           },
-          "overall": 70,
+          "overall": 66,
           "source": "manual"
         }
       ]
@@ -1888,5 +1957,5 @@
       ]
     }
   },
-  "_ts": 1785738655999
+  "_ts": 1785743281296
 }
