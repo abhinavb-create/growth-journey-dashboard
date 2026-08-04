@@ -1880,6 +1880,12 @@
           "text": "Need to improve the funnel to close more MTUs in the Churn/Revival target ; haven't scaled on the charter with respective aggression",
           "date": "2026-08-04T11:15:58.320Z"
         }
+      ],
+      "reporting": [
+        {
+          "text": "Reporting is growing but has to improve the reporting on docs & sheets at extensive level",
+          "date": "2026-08-04T11:16:32.869Z"
+        }
       ]
     }
   },
@@ -1965,5 +1971,5 @@
       ]
     }
   },
-  "_ts": 1785842158323
+  "_ts": 1785842192874
 }
