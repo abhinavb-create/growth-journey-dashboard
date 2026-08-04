@@ -1477,8 +1477,42 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-08-04T11:22:22.435Z",
+          "skills": {
+            "sales": 60,
+            "reporting": 50,
+            "maturity": 50,
+            "independence": 73,
+            "ai": 2,
+            "xfunc": 88,
+            "escalation": 9,
+            "comms": 87,
+            "enthusiasm": 65
+          },
+          "leadership": {
+            "people": 33,
+            "vision": 18,
+            "stakeholder": 32,
+            "developing": 50,
+            "resilience": 48,
+            "decision": 48
+          },
+          "note": "",
+          "comments": {
+            "ldr_people": "Need to improve on guidance &",
+            "ldr_vision": "Yet to grow on charter vision, how to improvise numbers with more cross-functional scope",
+            "ldr_stakeholder": "Low availability flagged by the team on respective doubts or issues",
+            "ldr_developing": "Need to work more and be aware on the team and individual funnel & performances",
+            "ldr_resilience": "Need more aggression on scoping the charter vision better to improvise number",
+            "ldr_decision": "Haven't adopted any new measures or decision to improvise the team efficiency"
+          },
+          "overall": 48,
+          "source": "manual"
         }
-      ]
+      ],
+      "quarters": {}
     },
     {
       "color": "#0EA5E9",
@@ -1995,5 +2029,5 @@
       ]
     }
   },
-  "_ts": 1785842369521
+  "_ts": 1785842579817
 }
