@@ -1873,6 +1873,14 @@
           "date": "2026-07-28T09:13:43.942Z"
         }
       ]
+    },
+    "m11": {
+      "sales": [
+        {
+          "text": "Need to improve the funnel to close more MTUs in the Churn/Revival target ; haven't scaled on the charter with respective aggression",
+          "date": "2026-08-04T11:15:58.320Z"
+        }
+      ]
     }
   },
   "h": {
@@ -1957,5 +1965,5 @@
       ]
     }
   },
-  "_ts": 1785743281296
+  "_ts": 1785842158323
 }
