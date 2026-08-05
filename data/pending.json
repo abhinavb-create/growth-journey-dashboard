@@ -14,5 +14,18 @@
     "status": "returned",
     "mgrComment": "Can you give me details ; Total email lined up, how many sent, how many we have received and what funnel they have moved to?",
     "returnedDate": "2026-07-30T08:55:57.968Z"
+  },
+  {
+    "id": "p1785916745794",
+    "type": "achievement",
+    "target": "m2",
+    "from": "m2",
+    "category": "AI Initiative",
+    "skillKey": "ai",
+    "selfRating": 4,
+    "impact": "How it's actually helping: the biggest value is catching things you'd otherwise miss — escalations like today's NagadPe one, deals going stale like Wogom, and unanswered merchant emails — before they become bigger problems. It also compresses what used to be manual inbox/calendar/sheet-checking into one command each morning and evening, and gives you a consistent way to report your own numbers up to Abhinav without extra manual rollup work.",
+    "text": "Here's the full lineup of your Sales Copilot tooling, built up since May:\n\nCore daily workflow\n\nMorning triage bot (\"run my bots\" / \"run my email bot\") — pulls Gmail inbox, Calendar, and the Drive pipeline sheet in parallel, flags urgent emails, missed replies, and today's meetings. Runs off a 9am recurring calendar trigger.\nEOD missed-reply sweep — same bot, evening pass at 6pm, catches anything from the day that slipped through before you log off.\n\nDeal management bots\n\nStale-deal nudge bot — flags deals that have gone quiet (this is what keeps surfacing Wogom, for instance) so nothing sits untouched for weeks without you noticing.\nMerchant onboarding tracker bot — tracks accounts through the activation/integration pipeline so you can see who's stuck and why.\nEmail reply bot — helps draft quick responses to merchant threads directly from the triage pass.\n\nReporting\n\nWeekly performance summary bot — rolls up your dial/connect/GMV numbers against team and quarterly targets (the AMJ/JAS tracking you've been doing).\n\nPre-call prep\n\nPre-call brief generator — pulls context on a merchant before a scheduled call so you walk in knowing their history, not scrambling beforehand.\n\nSharing/scaling\n\nStandalone deployable HTML dashboard — a version of the whole Sales Copilot dashboard (inbox, deals, calendar, pipeline tabs) that you built so Nishi and Prerna, or the wider team, could use it without going through Claude directly.",
+    "ref": "",
+    "date": "2026-08-05T07:59:05.794Z"
   }
 ]
