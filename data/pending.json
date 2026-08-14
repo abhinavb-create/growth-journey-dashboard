@@ -42,5 +42,19 @@
     "ref": "",
     "photo": "",
     "date": "2026-08-14T09:45:22.500Z"
+  },
+  {
+    "id": "p1786701192328",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "Process Improvement",
+    "skillKey": "reporting",
+    "selfRating": 4,
+    "impact": "Gave the team a single, standardised dataset (6 dimensions, colour-coded confidence) across 150+ startups spanning 5 government cohorts — replacing ad hoc, per-person research with one shared source.",
+    "text": "Researched registered office address, web traffic, AOV, turnover, funding, and estimated online GMV for 150+ startups across KSUM, AIIDC, iStart, Rajasthan, and MeitY cohorts. Delivered as Excel workbooks with green/yellow/red confidence flags per data point so the team could prioritise outreach by data reliability, not just company name recognition.",
+    "ref": "",
+    "photo": "",
+    "date": "2026-08-14T09:53:12.328Z"
   }
 ]
