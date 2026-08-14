@@ -28,5 +28,19 @@
     "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
     "photo": "",
     "date": "2026-08-14T09:41:00.863Z"
+  },
+  {
+    "id": "p1786700722500",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "AI Initiative",
+    "skillKey": "ai",
+    "selfRating": 3,
+    "impact": "The SDR scheduling bot",
+    "text": "To address the scheduling overlap issues between SDRs and Sales POCs, I have created and shared a calendar checking bot with the OPO team.\n\nWhat changed:\n\nPrevious Issue: SDRs lacked visibility into Sales POC calendars, leading to double-booking and missed meetings.\n\nSolution: The new bot allows the OPO/SDR team to check real-time individual Sales POC calendar availability before booking meetings, effectively eliminating scheduling conflicts.",
+    "ref": "",
+    "photo": "",
+    "date": "2026-08-14T09:45:22.500Z"
   }
 ]
