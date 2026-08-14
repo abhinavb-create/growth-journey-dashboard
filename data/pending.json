@@ -98,5 +98,19 @@
     "ref": "",
     "photo": "",
     "date": "2026-08-14T09:57:21.946Z"
+  },
+  {
+    "id": "p1786701637748",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "Process Improvement",
+    "skillKey": "reporting",
+    "selfRating": 5,
+    "impact": "Standardised outbound communication quality across the team and cut per-outreach drafting time by giving every rep a ready template instead of writing from scratch each time.",
+    "text": "Built and rolled out a reusable email-template library — cold outreach, post-meeting follow-up, post-proposal nudge, and re-engagement sequences — standardised and signed under the Associate Manager title for consistency across use cases. The new SDR is also using the same template for the new meeting setup.",
+    "ref": "",
+    "photo": "",
+    "date": "2026-08-14T10:00:37.748Z"
   }
 ]
