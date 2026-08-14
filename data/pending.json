@@ -14,5 +14,19 @@
     "status": "returned",
     "mgrComment": "Can you give me details ; Total email lined up, how many sent, how many we have received and what funnel they have moved to?",
     "returnedDate": "2026-07-30T08:55:57.968Z"
+  },
+  {
+    "id": "p1786700460863",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "Other",
+    "skillKey": "enthusiasm",
+    "selfRating": 5,
+    "impact": "Self-initiating the PG × RazorpayX cross-team programme — nobody assigned it; I proposed and built it.",
+    "text": "Created a tracking for all the PG + X leads passed between both teams. Currently, there is a total of 45 leads passed to X team from the whole POD. This has created a huge pipleline for the Startup X hunting team",
+    "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
+    "photo": "",
+    "date": "2026-08-14T09:41:00.863Z"
   }
 ]
