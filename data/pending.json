@@ -56,5 +56,19 @@
     "ref": "",
     "photo": "",
     "date": "2026-08-14T09:53:12.328Z"
+  },
+  {
+    "id": "p1786701243379",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "Process Improvement",
+    "skillKey": "reporting",
+    "selfRating": 3,
+    "impact": "Gave leadership a consistent, always-current view of team activity instead of one-off status updates.",
+    "text": "Set up and maintain the BiWeekly Sales POD Update doc and the Startup Team Initiatives tracker — both now the standing reference for team-level reporting.",
+    "ref": "",
+    "photo": "",
+    "date": "2026-08-14T09:54:03.379Z"
   }
 ]
