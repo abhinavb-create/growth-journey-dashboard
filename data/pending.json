@@ -70,5 +70,19 @@
     "ref": "",
     "photo": "",
     "date": "2026-08-14T09:54:03.379Z"
+  },
+  {
+    "id": "p1786701295211",
+    "type": "achievement",
+    "target": "m3",
+    "from": "m3",
+    "category": "AI Initiative",
+    "skillKey": "ai",
+    "selfRating": 3,
+    "impact": "Cut time spent manually scanning inboxes by surfacing high-priority emails automatically, ranked by urgency, action required, and sender seniority.",
+    "text": "Built a Gmail triage bot using a two-call Claude API architecture (one call to classify, one to summarize/prioritize) to flag important emails without manual review of every message.",
+    "ref": "",
+    "photo": "",
+    "date": "2026-08-14T09:54:55.211Z"
   }
 ]
