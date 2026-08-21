@@ -2095,6 +2095,12 @@
           "text": "Yet to evaluate more, since joined 1 month ago",
           "date": "2026-08-21T11:24:09.005Z"
         }
+      ],
+      "enthusiasm": [
+        {
+          "text": "Yet to evaluate more, since joined 1 month ago",
+          "date": "2026-08-21T11:24:14.322Z"
+        }
       ]
     }
   },
@@ -2198,5 +2204,5 @@
       ]
     }
   },
-  "_ts": 1787311449498
+  "_ts": 1787311454843
 }
