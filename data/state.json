@@ -745,8 +745,40 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-08-21T11:19:27.273Z",
+          "skills": {
+            "sales": 70,
+            "reporting": 70,
+            "maturity": 50,
+            "independence": 40,
+            "ai": 15,
+            "xfunc": 86,
+            "escalation": 20,
+            "comms": 77,
+            "enthusiasm": 95
+          },
+          "leadership": {
+            "people": 0,
+            "vision": 0,
+            "stakeholder": 0,
+            "developing": 0,
+            "resilience": 0,
+            "decision": 0
+          },
+          "note": "",
+          "comments": {},
+          "overall": 58,
+          "source": "manual"
         }
-      ]
+      ],
+      "quarters": {
+        "q1": {
+          "pct": 100,
+          "note": ""
+        }
+      }
     },
     {
       "color": "#0891B2",
@@ -2014,6 +2046,14 @@
           "date": "2026-08-21T11:19:20.941Z"
         }
       ]
+    },
+    "m13": {
+      "reporting": [
+        {
+          "text": "Yet to evaluate more.",
+          "date": "2026-08-21T11:22:43.922Z"
+        }
+      ]
     }
   },
   "h": {
@@ -2116,5 +2156,5 @@
       ]
     }
   },
-  "_ts": 1787311162016
+  "_ts": 1787311364685
 }
