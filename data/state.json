@@ -1783,6 +1783,21 @@
       "ref": "",
       "date": "2026-08-05T07:59:05.794Z",
       "approvedDate": "2026-08-12T04:41:03.102Z"
+    },
+    {
+      "id": "p1786700460863",
+      "type": "achievement",
+      "target": "m3",
+      "from": "m3",
+      "category": "Cross-functional",
+      "skillKey": "xfunc",
+      "selfRating": 2,
+      "impact": "Self-initiating the PG × RazorpayX cross-team programme — nobody assigned it; I proposed and built it.",
+      "text": "Created a tracking for all the PG + X leads passed between both teams. Currently, there is a total of 45 leads passed to X team from the whole POD. This has created a huge pipleline for the Startup X hunting team",
+      "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
+      "photo": "",
+      "date": "2026-08-14T09:41:00.863Z",
+      "approvedDate": "2026-08-17T05:05:48.113Z"
     }
   ],
   "c": {
@@ -1973,6 +1988,14 @@
           "date": "2026-08-17T05:04:51.131Z"
         }
       ]
+    },
+    "m5": {
+      "maturity": [
+        {
+          "text": "Need to improvise on professional maturity, eg; set the right expectations with merchant on priorities and timelines.",
+          "date": "2026-08-21T11:17:55.689Z"
+        }
+      ]
     }
   },
   "h": {
@@ -2032,6 +2055,15 @@
           "ref": "",
           "date": "2026-07-28T07:44:18.687Z"
         }
+      ],
+      "xfunc": [
+        {
+          "id": "ha1786943148113",
+          "text": "Cross-functional — Self-initiating the PG × RazorpayX cross-team programme — no…",
+          "type": "achievement",
+          "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
+          "date": "2026-08-17T05:05:48.113Z"
+        }
       ]
     },
     "m8": {
@@ -2066,5 +2098,5 @@
       ]
     }
   },
-  "_ts": 1786943092066
+  "_ts": 1787311075697
 }
