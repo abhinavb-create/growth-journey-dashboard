@@ -491,36 +491,6 @@
           },
           "overall": 72,
           "source": "manual"
-        },
-        {
-          "date": "2026-08-25T05:51:27.344Z",
-          "skills": {
-            "sales": 95,
-            "reporting": 60,
-            "maturity": 98,
-            "independence": 98,
-            "ai": 19,
-            "xfunc": 100,
-            "escalation": 5,
-            "comms": 97,
-            "enthusiasm": 81
-          },
-          "leadership": {
-            "people": 73,
-            "vision": 39,
-            "stakeholder": 80,
-            "developing": 93,
-            "resilience": 85,
-            "decision": 59
-          },
-          "note": "Achievement approved: Cross-functional",
-          "comments": {
-            "ldr_people": "Team appreciates the leadership style and finds it comforting owing to practical approach",
-            "ldr_vision": "Startup as charter is high energy and require fast momentum to grab and close lead ; Need to improve the vision by enabling to turn-around more MTUs",
-            "ldr_decision": "Yet to grow on decision making, how & what to prioritize is still pending."
-          },
-          "overall": 73,
-          "source": "manual"
         }
       ]
     },
@@ -1328,6 +1298,7 @@
       "role": "Senior Associate, Emerging Business",
       "email": "prerna.kumari@razorpay.com",
       "pod_leader": false,
+      "no_leadership": true,
       "history": [
         {
           "date": "2026-04-28T10:35:28.989Z",
@@ -1577,121 +1548,6 @@
       "quarters": {}
     },
     {
-      "color": "#0EA5E9",
-      "id": "m12",
-      "name": "Aaron Paul",
-      "level": "SA",
-      "role": "Senior Associate, Emerging Business",
-      "email": "aaron.paul@razorpay.com",
-      "pod_leader": false,
-      "history": [
-        {
-          "date": "2026-05-05T00:00:00Z",
-          "skills": {
-            "sales": 0,
-            "reporting": 0,
-            "maturity": 0,
-            "independence": 0,
-            "ai": 0,
-            "xfunc": 0,
-            "escalation": 0,
-            "comms": 0,
-            "enthusiasm": 0
-          },
-          "leadership": {
-            "people": 0,
-            "vision": 0,
-            "stakeholder": 0,
-            "developing": 0,
-            "resilience": 0,
-            "decision": 0
-          },
-          "note": "",
-          "comments": {},
-          "overall": 0,
-          "source": "seed"
-        },
-        {
-          "date": "2026-06-04T00:00:00Z",
-          "skills": {
-            "sales": 0,
-            "reporting": 0,
-            "maturity": 0,
-            "independence": 0,
-            "ai": 0,
-            "xfunc": 0,
-            "escalation": 0,
-            "comms": 0,
-            "enthusiasm": 0
-          },
-          "leadership": {
-            "people": 0,
-            "vision": 0,
-            "stakeholder": 0,
-            "developing": 0,
-            "resilience": 0,
-            "decision": 0
-          },
-          "note": "",
-          "comments": {},
-          "overall": 0,
-          "source": "seed"
-        },
-        {
-          "date": "2026-07-04T00:00:00Z",
-          "skills": {
-            "sales": 0,
-            "reporting": 0,
-            "maturity": 0,
-            "independence": 0,
-            "ai": 0,
-            "xfunc": 0,
-            "escalation": 0,
-            "comms": 0,
-            "enthusiasm": 0
-          },
-          "leadership": {
-            "people": 0,
-            "vision": 0,
-            "stakeholder": 0,
-            "developing": 0,
-            "resilience": 0,
-            "decision": 0
-          },
-          "note": "",
-          "comments": {},
-          "overall": 0,
-          "source": "seed"
-        },
-        {
-          "date": "2026-08-03T00:00:00Z",
-          "skills": {
-            "sales": 0,
-            "reporting": 0,
-            "maturity": 0,
-            "independence": 0,
-            "ai": 0,
-            "xfunc": 0,
-            "escalation": 0,
-            "comms": 0,
-            "enthusiasm": 0
-          },
-          "leadership": {
-            "people": 0,
-            "vision": 0,
-            "stakeholder": 0,
-            "developing": 0,
-            "resilience": 0,
-            "decision": 0
-          },
-          "note": "",
-          "comments": {},
-          "overall": 0,
-          "source": "seed"
-        }
-      ]
-    },
-    {
       "color": "#8B5CF6",
       "id": "m13",
       "name": "Arpit Shukla",
@@ -1699,6 +1555,7 @@
       "role": "Senior Associate, Emerging Business",
       "email": "arpit.shukla@razorpay.com",
       "pod_leader": false,
+      "no_leadership": true,
       "history": [
         {
           "date": "2026-05-05T00:00:00Z",
@@ -1860,21 +1717,6 @@
       "photo": "",
       "date": "2026-08-14T09:41:00.863Z",
       "approvedDate": "2026-08-17T05:05:48.113Z"
-    },
-    {
-      "id": "p1786700460863",
-      "type": "achievement",
-      "target": "m3",
-      "from": "m3",
-      "category": "Cross-functional",
-      "skillKey": "xfunc",
-      "selfRating": 1,
-      "impact": "Self-initiating the PG × RazorpayX cross-team programme — nobody assigned it; I proposed and built it.",
-      "text": "Created a tracking for all the PG + X leads passed between both teams. Currently, there is a total of 45 leads passed to X team from the whole POD. This has created a huge pipleline for the Startup X hunting team",
-      "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
-      "photo": "",
-      "date": "2026-08-14T09:41:00.863Z",
-      "approvedDate": "2026-08-25T05:51:27.345Z"
     }
   ],
   "c": {
@@ -1997,12 +1839,6 @@
         {
           "text": "Good, but yet it lacks the energy required in the respective leading POD. Provided startup is high-turnaround and fast moving charter.",
           "date": "2026-07-28T09:04:28.621Z"
-        }
-      ],
-      "xfunc": [
-        {
-          "text": "PG<> X ; This is not yet automated, has limited visibility and we should adopt to better solution",
-          "date": "2026-08-25T05:52:25.067Z"
         }
       ]
     },
@@ -2255,5 +2091,5 @@
       ]
     }
   },
-  "_ts": 1787653555637
+  "_ts": 1787311454843
 }
