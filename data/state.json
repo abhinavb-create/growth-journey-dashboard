@@ -1998,6 +1998,12 @@
           "text": "Good, but yet it lacks the energy required in the respective leading POD. Provided startup is high-turnaround and fast moving charter.",
           "date": "2026-07-28T09:04:28.621Z"
         }
+      ],
+      "xfunc": [
+        {
+          "text": "PG<> X ; This is not yet automated, has limited visibility and we should adopt to better solution",
+          "date": "2026-08-25T05:52:25.067Z"
+        }
       ]
     },
     "m4": {
@@ -2249,5 +2255,5 @@
       ]
     }
   },
-  "_ts": 1787637099178
+  "_ts": 1787637145070
 }
