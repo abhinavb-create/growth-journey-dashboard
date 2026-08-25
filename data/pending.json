@@ -27,7 +27,10 @@
     "text": "To address the scheduling overlap issues between SDRs and Sales POCs, I have created and shared a calendar checking bot with the OPO team.\n\nWhat changed:\n\nPrevious Issue: SDRs lacked visibility into Sales POC calendars, leading to double-booking and missed meetings.\n\nSolution: The new bot allows the OPO/SDR team to check real-time individual Sales POC calendar availability before booking meetings, effectively eliminating scheduling conflicts.",
     "ref": "",
     "photo": "",
-    "date": "2026-08-14T09:45:22.500Z"
+    "date": "2026-08-14T09:45:22.500Z",
+    "status": "returned",
+    "mgrComment": "Share details of this on email or whatsapp to track the effectiveness of this.",
+    "returnedDate": "2026-08-25T05:58:50.125Z"
   },
   {
     "id": "p1786701192328",
