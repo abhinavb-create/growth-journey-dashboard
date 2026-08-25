@@ -1860,6 +1860,12 @@
           "text": "Need to grow on this very extensively, the data's has multiple breakages and should have segmented + structured storyline for data.",
           "date": "2026-08-25T11:01:40.394Z"
         }
+      ],
+      "ai": [
+        {
+          "text": "Have explored but haven't adopted AI changes with the team or have built relative tools to accommodate & help oneself & team",
+          "date": "2026-08-25T11:03:01.410Z"
+        }
       ]
     },
     "m11": {
@@ -2097,5 +2103,5 @@
       ]
     }
   },
-  "_ts": 1787655700397
+  "_ts": 1787655781412
 }
