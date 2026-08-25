@@ -47,20 +47,6 @@
     "date": "2026-08-14T09:53:12.328Z"
   },
   {
-    "id": "p1786701441946",
-    "type": "achievement",
-    "target": "m3",
-    "from": "m3",
-    "category": "Process Improvement",
-    "skillKey": "reporting",
-    "selfRating": 4,
-    "impact": "Converted a failed campaign into the quarter's best-performing outreach channel (25% connectivity vs. <1% on the general list).",
-    "text": "After the 50+ startup \"Meet Razorpay's Startup Program!\" cold campaign returned near-zero replies, redesigned the approach by A/B testing OPO dialling against Incubation data instead of dropping the channel.We have more than 45 meetings from the same list currently, out of which 27 are in the BOFU funnel",
-    "ref": "",
-    "photo": "",
-    "date": "2026-08-14T09:57:21.946Z"
-  },
-  {
     "id": "p1786701637748",
     "type": "achievement",
     "target": "m3",
