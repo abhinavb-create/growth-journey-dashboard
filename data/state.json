@@ -491,6 +491,36 @@
           },
           "overall": 72,
           "source": "manual"
+        },
+        {
+          "date": "2026-08-25T05:51:27.344Z",
+          "skills": {
+            "sales": 95,
+            "reporting": 60,
+            "maturity": 98,
+            "independence": 98,
+            "ai": 19,
+            "xfunc": 100,
+            "escalation": 5,
+            "comms": 97,
+            "enthusiasm": 81
+          },
+          "leadership": {
+            "people": 73,
+            "vision": 39,
+            "stakeholder": 80,
+            "developing": 93,
+            "resilience": 85,
+            "decision": 59
+          },
+          "note": "Achievement approved: Cross-functional",
+          "comments": {
+            "ldr_people": "Team appreciates the leadership style and finds it comforting owing to practical approach",
+            "ldr_vision": "Startup as charter is high energy and require fast momentum to grab and close lead ; Need to improve the vision by enabling to turn-around more MTUs",
+            "ldr_decision": "Yet to grow on decision making, how & what to prioritize is still pending."
+          },
+          "overall": 73,
+          "source": "manual"
         }
       ]
     },
@@ -1830,6 +1860,21 @@
       "photo": "",
       "date": "2026-08-14T09:41:00.863Z",
       "approvedDate": "2026-08-17T05:05:48.113Z"
+    },
+    {
+      "id": "p1786700460863",
+      "type": "achievement",
+      "target": "m3",
+      "from": "m3",
+      "category": "Cross-functional",
+      "skillKey": "xfunc",
+      "selfRating": 1,
+      "impact": "Self-initiating the PG × RazorpayX cross-team programme — nobody assigned it; I proposed and built it.",
+      "text": "Created a tracking for all the PG + X leads passed between both teams. Currently, there is a total of 45 leads passed to X team from the whole POD. This has created a huge pipleline for the Startup X hunting team",
+      "ref": "https://docs.google.com/spreadsheets/d/1VyvD63xHaaLNqefo-Gij6kW_aLxpcwt2TgxEDvCqraM/edit?gid=0#gid=0",
+      "photo": "",
+      "date": "2026-08-14T09:41:00.863Z",
+      "approvedDate": "2026-08-25T05:51:27.345Z"
     }
   ],
   "c": {
@@ -2204,5 +2249,5 @@
       ]
     }
   },
-  "_ts": 1787311454843
+  "_ts": 1787637099178
 }
