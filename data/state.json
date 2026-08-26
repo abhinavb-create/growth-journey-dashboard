@@ -1399,6 +1399,32 @@
           "note": "",
           "comments": {},
           "overall": 0
+        },
+        {
+          "date": "2026-08-26T07:21:49.534Z",
+          "skills": {
+            "sales": 62,
+            "reporting": 88,
+            "maturity": 61,
+            "independence": 60,
+            "ai": 25,
+            "xfunc": 66,
+            "escalation": 15,
+            "comms": 80,
+            "enthusiasm": 85
+          },
+          "leadership": {
+            "people": 0,
+            "vision": 0,
+            "stakeholder": 0,
+            "developing": 0,
+            "resilience": 0,
+            "decision": 0
+          },
+          "note": "",
+          "comments": {},
+          "overall": 60,
+          "source": "manual"
         }
       ]
     },
@@ -1863,6 +1889,10 @@
       ],
       "ai": [
         {
+          "text": "Heavy resistance on adopting new AI Workflows or tools as well.",
+          "date": "2026-08-26T07:23:49.752Z"
+        },
+        {
           "text": "Have explored but haven't adopted AI changes with the team or have built relative tools to accommodate & help oneself & team",
           "date": "2026-08-25T11:03:01.410Z"
         }
@@ -2133,5 +2163,5 @@
       ]
     }
   },
-  "_ts": 1787728883750
+  "_ts": 1787729029756
 }
